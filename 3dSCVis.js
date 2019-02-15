@@ -29,9 +29,12 @@ var createScene = function () {
     
     // Clone spheres
     for (var index = 0; index < coords.length; index++) {
-        var clone = sphere.clone("sphere" + (index + 1), null, true);
-        clone.position = new BABYLON.Vector3(coords[index][0], coords[index][1], coords[index][2]);
-        clone.material = mats[clusters[index]]
+        var cln = sphere.clone("sphere" + (index + 1), null, true);
+        cln.position = new BABYLON.Vector3(coords[index][0], coords[index][1], coords[index][2]);
+        cln.material = mats[clusters[index]]
+        cln.freezeWorldMatrix();
+        // cln.convertToUnIndexedMesh();
+        cln.cullingStrategy = BABYLON.AbstractMesh.CULLINGSTRATEGY_BOUNDINGSPHERE_ONLY;
     }
     sphere.setEnabled(false);
     // scene.createOrUpdateSelectionOctree();
