@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>3dSCVis</title>
+  <style>
+    html,
+    body,
+    canvas {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-size: 0;
+    }
+  </style>
+  <script src="babylon.custom.js"></script>
+  <script type="text/javascript" src="umap_coords.json"></script>
+  <script src="3dSCVis.js"></script>
+</head>
+
+<body>
+  <canvas id="render-canvas"></canvas>
+  <script>
+    var canvas = document.getElementById("render-canvas");
+    var engine = new BABYLON.Engine(canvas);
+    var scene = createScene(engine);
+    var renderLoop = function () {
+      scene.render();
+    };
+    engine.runRenderLoop(renderLoop);
+  </script>
+</body>
+
+</html>
