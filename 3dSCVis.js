@@ -15,8 +15,8 @@ var createScene = function () {
     
     
     // Fog
-    // scene.fogMode = BABYLON.Scene.FOGMODE_EXP;
-    // scene.fogDensity = 0.05;
+    scene.fogMode = BABYLON.Scene.FOGMODE_EXP;
+    scene.fogDensity = 0.05;
     var sphere = BABYLON.Mesh.CreateSphere("sphere0", 1, .1, scene);
 
     mats = [];
