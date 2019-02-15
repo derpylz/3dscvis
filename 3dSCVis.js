@@ -34,7 +34,7 @@ var createScene = function () {
         clone.material = mats[clusters[index]]
     }
     sphere.setEnabled(false);
-    scene.createOrUpdateSelectionOctree();
+    // scene.createOrUpdateSelectionOctree();
     
     return scene;
 };
