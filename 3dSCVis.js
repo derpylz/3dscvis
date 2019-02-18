@@ -4,40 +4,93 @@ var clusters = ["2", "2", "0", "0", "1", "0", "3", "1", "0", "0", "0", "0", "2",
 
 var colors = [[0,1.0, 0], [1.0, 0, 0], [0, 0, 1.0], [1.0, 1.0, 0], [1.0, 0, 1.0], [0, 1.0, 1.0], [1.0, 0.5, 0.5], [0.5, 0.5, 1], [0.5, 1.0, 0.5]]
 
+var VR = true;
+var fog = false;
+
 var createScene = function () {
     var scene = new BABYLON.Scene(engine);
-    var vrHelper = scene.createDefaultVRExperience(); // creates camera
-    scene.clearColor = new BABYLON.Color3(1, 1, 1);
-    // var camera = new BABYLON.ArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), scene);
-    
-    // camera.setPosition(new BABYLON.Vector3(-10, 10, 0));
-    // camera.attachControl(canvas, true);
-    
-    
-    // Fog
-    scene.fogMode = BABYLON.Scene.FOGMODE_EXP;
-    scene.fogDensity = 0.05;
-    var sphere = BABYLON.Mesh.CreateSphere("sphere0", 1, .1, scene);
 
-    mats = [];
+    if (VR) {
+        var vrHelper = scene.createDefaultVRExperience(); // creates camera
+    } else {
+        var camera = new BABYLON.ArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), scene);
+        camera.setPosition(new BABYLON.Vector3(-10, 10, 0));
+        camera.attachControl(canvas, true);
+    }
+    scene.clearColor = new BABYLON.Color3(1, 1, 1);
+    
+    if (fog) {
+        scene.fogMode = BABYLON.Scene.FOGMODE_EXP;
+        scene.fogDensity = 0.05;
+    }
+
+    // var pl = new BABYLON.PointLight("pl", new BABYLON.Vector3(0, 0, 0), scene);
+    // pl.diffuse = new BABYLON.Color3(1, 1, 1);
+    // pl.specular = new BABYLON.Color3(0.5, 0.2, 0.2);
+    // pl.intensity = 0.75;
+    var hl = new BABYLON.HemisphericLight("HemiLight", new BABYLON.Vector3(0, 1, 0), scene);
+    hl.diffuse = new BABYLON.Color3(1, 1, 1); 
+    hl.specular = new BABYLON.Color3(0, 0, 0);
+
+    var SPS = createCellParticles(scene);
+    
+    // materials = createMaterials(scene);
+
+    // makeSpheres(scene);
+
+    scene.registerBeforeRender(function() {
+        SPS.mesh.rotation.y += 0.01;
+    });
+
+    return scene;
+};
+
+function createCellParticles(scene) {
+    // var cell = BABYLON.MeshBuilder.CreateDisc("t", {tessellation: 8, sideOrientation: BABYLON.Mesh.DOUBLESIDE, radius: 0.05}, scene);
+    var cell = BABYLON.Mesh.CreateSphere("sphere", 8, .1, scene);
+    var SPS = new BABYLON.SolidParticleSystem('SPS', scene, { updatable: false });
+    SPS.addShape(cell, coords.length, { positionFunction: positionCells });
+    var mesh = SPS.buildMesh();
+    cell.dispose();
+    // SPS.billboard = true;
+    SPS.setParticles();
+    return SPS;
+}
+
+/**
+ * Position and color cells according to their umap coordinates
+ * @param {Object} particle the current cell to be positioned
+ * @param {Number} i its global index in the SPS
+ * @param {Number} s its index in its shape
+ */
+function positionCells(particle, _i, s) {
+    particle.position.x = coords[s][0];
+    particle.position.y = coords[s][1];
+    particle.position.z = coords[s][2];
+    particle.color = new BABYLON.Color3(colors[clusters[s]][0], colors[clusters[s]][1], colors[clusters[s]][2], 1.0);
+}
+
+function makeSpheres(scene) {
+    var sphere = BABYLON.Mesh.CreateSphere("sphere0", 1, .1, scene);
+    for (var index = 0; index < coords.length; index++) {
+        var cln = sphere.clone("sphere" + (index + 1), null, true);
+        cln.position = new BABYLON.Vector3(coords[index][0], coords[index][1], coords[index][2]);
+        cln.material = materials[clusters[index]];
+        cln.freezeWorldMatrix();
+        // cln.convertToUnIndexedMesh();
+        cln.cullingStrategy = BABYLON.AbstractMesh.CULLINGSTRATEGY_BOUNDINGSPHERE_ONLY;
+    }
+    sphere.setEnabled(false);
+}
+
+function createMaterials(scene) {
+    var mats = []
     for (var i = 0; i < colors.length; i++) {
         mat = new BABYLON.StandardMaterial("mat" + i, scene);
         mat.emissiveColor = new BABYLON.Color3(colors[i][0], colors[i][1], colors[i][2]);
         mat.checkReadyOnEveryCall = false;
         mats.push(mat);
     }
-    
-    // Clone spheres
-    for (var index = 0; index < coords.length; index++) {
-        var cln = sphere.clone("sphere" + (index + 1), null, true);
-        cln.position = new BABYLON.Vector3(coords[index][0], coords[index][1], coords[index][2]);
-        cln.material = mats[clusters[index]]
-        cln.freezeWorldMatrix();
-        // cln.convertToUnIndexedMesh();
-        cln.cullingStrategy = BABYLON.AbstractMesh.CULLINGSTRATEGY_BOUNDINGSPHERE_ONLY;
-    }
-    sphere.setEnabled(false);
-    // scene.createOrUpdateSelectionOctree();
-    
-    return scene;
-};
+    return mats
+}
+
