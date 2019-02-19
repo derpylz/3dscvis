@@ -39,7 +39,9 @@ var createScene = function () {
     // makeSpheres(scene);
 
     scene.registerBeforeRender(function() {
-        SPS.mesh.rotation.y += 0.01;
+        if (!VR) {
+            SPS.mesh.rotation.y += 0.01;
+        }
     });
 
     return scene;
@@ -47,7 +49,7 @@ var createScene = function () {
 
 function createCellParticles(scene) {
     // var cell = BABYLON.MeshBuilder.CreateDisc("t", {tessellation: 8, sideOrientation: BABYLON.Mesh.DOUBLESIDE, radius: 0.05}, scene);
-    var cell = BABYLON.Mesh.CreateSphere("sphere", 8, .1, scene);
+    var cell = BABYLON.Mesh.CreateSphere("sphere", 4, .1, scene);
     var SPS = new BABYLON.SolidParticleSystem('SPS', scene, { updatable: false });
     SPS.addShape(cell, coords.length, { positionFunction: positionCells });
     var mesh = SPS.buildMesh();
