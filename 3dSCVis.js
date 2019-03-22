@@ -39,10 +39,20 @@ var SCVis = /** @class */ (function () {
         var SPS = new BABYLON.SolidParticleSystem('SPS', this._scene, {
             updatable: true
         });
-        // add all cells with position function
-        SPS.addShape(cell, this._coords.length, {
-            positionFunction: this._positionCells
-        });
+        // add all cells to SPS
+        SPS.addShape(cell, this._coords.length);
+        // position and color cells
+        for (var i = 0; i < SPS.nbParticles; i++) {
+            SPS.particles[i].position.x = this._coords[i][0];
+            SPS.particles[i].position.y = this._coords[i][1];
+            SPS.particles[i].position.z = this._coords[i][2];
+            if (this._clusters && this._colors) {
+                SPS.particles[i].color = BABYLON.Color4.FromHexString(this._colors[this._clusters[i]]);
+            }
+            else {
+                SPS.particles[i].color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
+            }
+        }
         SPS.buildMesh();
         // prepare cells for time series view
         if (this._setTimeSeries) {
@@ -55,18 +65,17 @@ var SCVis = /** @class */ (function () {
         SPS.setParticles();
         return SPS;
     };
-    SCVis.prototype._positionCells = function (particle, _i, s) {
-        particle.position.x = this._coords[s][0];
-        particle.position.y = this._coords[s][1];
-        particle.position.z = this._coords[s][2];
-        // if the color is not defined by a variable, all cells are colored blue
-        if (this._clusters) {
-            particle.color = BABYLON.Color4.FromHexString(this._colors[this._clusters[s]]);
-        }
-        else {
-            particle.color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
-        }
-    };
+    // private _positionCells(particle: BABYLON.SolidParticle, _i: number, s: number): void {
+    //     particle.position.x = this._coords[s][0];
+    //     particle.position.y = this._coords[s][1];
+    //     particle.position.z = this._coords[s][2];
+    //     // if the color is not defined by a variable, all cells are colored blue
+    //     if (this._clusters) {
+    //         particle.color = BABYLON.Color4.FromHexString(this._colors[this._clusters[s]]);
+    //     } else {
+    //         particle.color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
+    //     }
+    // }
     SCVis.prototype._setAllCellsInvisible = function () {
         for (var i = 0; i < this._SPS.nbParticles; i++) {
             this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
@@ -99,6 +108,9 @@ var SCVis = /** @class */ (function () {
         var uniqueClusters = clusters.filter(function (v, i, a) { return a.indexOf(v) === i; });
         var nColors = uniqueClusters.length;
         this._colors = chroma.scale(chroma.brewer.Paired).mode('lch').colors(nColors);
+        for (var i = 0; i < nColors; i++) {
+            this._colors[i] += "ff";
+        }
         // check cluster names
         if (clusterNames && clusterNames.length == nColors) {
             this._clusterNames = clusterNames;
@@ -111,6 +123,9 @@ var SCVis = /** @class */ (function () {
     };
     SCVis.prototype.colorByValue = function (values) {
         this._colors = chroma.scale(chroma.brewer.Viridis).mode('lch').colors(100);
+        for (var i = 0; i < 100; i++) {
+            this._colors[i] += "ff";
+        }
         this._clusters = this._evenBins(values);
         this._updateClusterColors();
     };
@@ -120,10 +135,10 @@ var SCVis = /** @class */ (function () {
         var binSize = Math.floor(N / binCount);
         var binSizeArr = Array(binCount).fill(binSize);
         var numbered = Array.apply(null, { length: binCount }).map(Number.call, Number);
-        binSizeArr = binSizeArr.map(function (x, idx) { return (numbered[idx] <= N) ? x + 1 : x; });
+        binSizeArr = binSizeArr.map(function (x, idx) { return (numbered[idx] <= N % binCount) ? x + 1 : x; });
         var binsArr = [];
         for (var i = 0; i < binCount; i++) {
-            binsArr.push(new Array(binSizeArr[i] - 1).fill(i));
+            binsArr.push(new Array(binSizeArr[i]).fill(i));
         }
         var bins = binsArr.flat();
         var sorted = vals.slice().sort(function (a, b) { return a - b; });

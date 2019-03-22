@@ -54,7 +54,7 @@ class SCVis {
         this._scene.registerBeforeRender(this._prepRender);
     }
 
-    
+
     private _createCellParticles(): BABYLON.SolidParticleSystem {
         // prototype cell
         let cell = BABYLON.Mesh.CreateSphere("sphere", 4, this._size, this._scene);
@@ -62,10 +62,19 @@ class SCVis {
         let SPS = new BABYLON.SolidParticleSystem('SPS', this._scene, {
             updatable: true
         });
-        // add all cells with position function
-        SPS.addShape(cell, this._coords.length, {
-            positionFunction: this._positionCells
-        });
+        // add all cells to SPS
+        SPS.addShape(cell, this._coords.length);
+        // position and color cells
+        for (let i = 0; i < SPS.nbParticles; i++) {
+            SPS.particles[i].position.x = this._coords[i][0];
+            SPS.particles[i].position.y = this._coords[i][1];
+            SPS.particles[i].position.z = this._coords[i][2];
+            if (this._clusters && this._colors) {
+                SPS.particles[i].color = BABYLON.Color4.FromHexString(this._colors[this._clusters[i]]);
+            } else {
+                SPS.particles[i].color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
+            }
+        }
 
         SPS.buildMesh();
         // prepare cells for time series view
@@ -80,18 +89,18 @@ class SCVis {
         return SPS
     }
 
-    private _positionCells(particle: BABYLON.SolidParticle, _i: number, s: number): void {
-        particle.position.x = this._coords[s][0];
-        particle.position.y = this._coords[s][1];
-        particle.position.z = this._coords[s][2];
-        // if the color is not defined by a variable, all cells are colored blue
-        if (this._clusters) {
-            particle.color = BABYLON.Color4.FromHexString(this._colors[this._clusters[s]]);
-        } else {
-            particle.color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
-        }
-    }
-    
+    // private _positionCells(particle: BABYLON.SolidParticle, _i: number, s: number): void {
+    //     particle.position.x = this._coords[s][0];
+    //     particle.position.y = this._coords[s][1];
+    //     particle.position.z = this._coords[s][2];
+    //     // if the color is not defined by a variable, all cells are colored blue
+    //     if (this._clusters) {
+    //         particle.color = BABYLON.Color4.FromHexString(this._colors[this._clusters[s]]);
+    //     } else {
+    //         particle.color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
+    //     }
+    // }
+
     private _setAllCellsInvisible(): void {
         for (let i = 0; i < this._SPS.nbParticles; i++) {
             this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
@@ -105,7 +114,7 @@ class SCVis {
         }
         this._SPS.setParticles();
     }
-    
+
     private _cameraFitCells(): void {
         let radius = this._SPS.mesh.getBoundingInfo().boundingSphere.radiusWorld;
         let aspectRatio = this._engine.getAspectRatio(this._camera);
@@ -128,6 +137,9 @@ class SCVis {
         let uniqueClusters = clusters.filter((v, i, a) => a.indexOf(v) === i)
         let nColors = uniqueClusters.length;
         this._colors = chroma.scale(chroma.brewer.Paired).mode('lch').colors(nColors);
+        for (let i = 0; i < nColors; i++) {
+            this._colors[i] += "ff";
+        }
         // check cluster names
         if (clusterNames && clusterNames.length == nColors) {
             this._clusterNames = clusterNames;
@@ -140,6 +152,9 @@ class SCVis {
 
     colorByValue(values: number[]): void {
         this._colors = chroma.scale(chroma.brewer.Viridis).mode('lch').colors(100);
+        for (let i = 0; i < 100; i++) {
+            this._colors[i] += "ff";
+        }
         this._clusters = this._evenBins(values);
         this._updateClusterColors();
     }
@@ -148,11 +163,11 @@ class SCVis {
         let N = vals.length;
         let binSize = Math.floor(N / binCount);
         let binSizeArr = Array(binCount).fill(binSize);
-        let numbered = Array.apply(null, {length: binCount}).map(Number.call, Number);
-        binSizeArr = binSizeArr.map((x, idx) => (numbered[idx] <= N) ? x + 1 : x);
+        let numbered = Array.apply(null, { length: binCount }).map(Number.call, Number);
+        binSizeArr = binSizeArr.map((x, idx) => (numbered[idx] <= N % binCount) ? x + 1 : x);
         let binsArr = [];
         for (let i = 0; i < binCount; i++) {
-            binsArr.push(new Array(binSizeArr[i] - 1).fill(i));
+            binsArr.push(new Array(binSizeArr[i]).fill(i));
         }
         let bins = binsArr.flat();
         let sorted = vals.slice().sort((a, b) => a - b);
@@ -163,7 +178,7 @@ class SCVis {
         }
         return binned;
     }
-    
+
     doRender(): void {
         this._engine.runRenderLoop(() => {
             this._scene.render();
