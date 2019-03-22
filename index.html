@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html" charset="utf-8" />
     <title>3dSCVis - demo</title>
     <!-- Link to the last version of BabylonJS -->
-    <script src="https://preview.babylonjs.com/babylon.js"></script>
+    <script src="babylon.custom.js"></script>
     <script src="chroma.min.js"></script>
     <script src="3dSCVis.js"></script>
 
@@ -4376,21 +4376,24 @@
             let vis = new SCVis("renderCanvas", coordinates);
             vis.createScene();
             vis.doRender();
+            vis.turntable = true;
             let clLength = clusters.length;
-            setInterval(
-                function () {
-                    vis.colorByValue(
-                        Array.from({length: clLength}, () => Math.random() * 10)
-                    );
-                },
-                500
-            );
+            // setInterval(
+            //     function () {
+            //         vis.colorByValue(
+            //             Array.from({length: clLength}, () => Math.random() * 10)
+            //         );
+            //     },
+            //     500
+            // );
+            // vis.colorByClusters(clusters);
+            vis.colorByValue(Array.from({length: clLength}, () => Math.random() * 10));
         });
     </script>
 </head>
 
 <body>
-    <canvas id="renderCanvas"></canvas>
+    <canvas id="renderCanvas" oncontextmenu="return false;"></canvas>
 </body>
 
 </html>

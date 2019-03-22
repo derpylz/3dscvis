@@ -13,19 +13,30 @@ class SCVis {
     private _clusters: number[];
     private _clusterNames: string[];
     private _colors: string[];
+    private _discrete: boolean;
     private _legend: BABYLON.GUI.AdvancedDynamicTexture;
     private _SPS: BABYLON.SolidParticleSystem;
     private _size: number = 0.1;
     private _setTimeSeries: boolean = false;
-    private _turntable: boolean = false;
-    private _rotationRate: number = 0.1;
+    private _rotationRate: number = 0.01;
+    
+    turntable: boolean = false;
+    showLegend: boolean = true;
 
+    /**
+     * Initialize the 3d visualization
+     * @param canvasElement ID of the canvas element in the dom
+     * @param coords Array of arrays containing the 3d coordinates of the cells
+     */
     constructor(canvasElement: string, coords: number[][]) {
         this._coords = coords;
         this._canvas = document.getElementById(canvasElement) as HTMLCanvasElement;
         this._engine = new BABYLON.Engine(this._canvas, true);
     }
 
+    /**
+     * Create the scene with camera, lights and the solid particle system
+     */
     createScene(): void {
         this._scene = new BABYLON.Scene(this._engine);
 
@@ -47,15 +58,17 @@ class SCVis {
         this._hl2.specular = new BABYLON.Color3(0, 0, 0);
 
         // Solid particle system with cell embedding
-        this._SPS = this._createCellParticles();
+        this._createCellParticles();
 
         this._cameraFitCells();
 
-        this._scene.registerBeforeRender(this._prepRender);
+        this._scene.registerBeforeRender(this._prepRender.bind(this));
     }
 
-
-    private _createCellParticles(): BABYLON.SolidParticleSystem {
+    /**
+     * Positions spheres according to coordinates in a SPS
+     */
+    private _createCellParticles(): void {
         // prototype cell
         let cell = BABYLON.Mesh.CreateSphere("sphere", 4, this._size, this._scene);
         // particle system
@@ -64,6 +77,7 @@ class SCVis {
         });
         // add all cells to SPS
         SPS.addShape(cell, this._coords.length);
+
         // position and color cells
         for (let i = 0; i < SPS.nbParticles; i++) {
             SPS.particles[i].position.x = this._coords[i][0];
@@ -77,6 +91,8 @@ class SCVis {
         }
 
         SPS.buildMesh();
+        // scale bounding box to actual size of the SPS particles
+        SPS.computeBoundingBox = true;
         // prepare cells for time series view
         if (this._setTimeSeries) {
             SPS.mesh.hasVertexAlpha = true;
@@ -86,21 +102,13 @@ class SCVis {
         cell.dispose();
         // calculate SPS particles
         SPS.setParticles();
-        return SPS
+        SPS.computeBoundingBox = false;
+        this._SPS = SPS;
     }
 
-    // private _positionCells(particle: BABYLON.SolidParticle, _i: number, s: number): void {
-    //     particle.position.x = this._coords[s][0];
-    //     particle.position.y = this._coords[s][1];
-    //     particle.position.z = this._coords[s][2];
-    //     // if the color is not defined by a variable, all cells are colored blue
-    //     if (this._clusters) {
-    //         particle.color = BABYLON.Color4.FromHexString(this._colors[this._clusters[s]]);
-    //     } else {
-    //         particle.color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
-    //     }
-    // }
-
+    /**
+     * Make all cells transparent for time series start
+     */
     private _setAllCellsInvisible(): void {
         for (let i = 0; i < this._SPS.nbParticles; i++) {
             this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
@@ -108,6 +116,9 @@ class SCVis {
         this._SPS.setParticles();
     }
 
+    /**
+     * Color cells according to this._clusters and this._colors
+     */
     private _updateClusterColors(): void {
         for (let i = 0; i < this._SPS.nbParticles; i++) {
             this._SPS.particles[i].color = BABYLON.Color4.FromHexString(this._colors[this._clusters[i]]);
@@ -115,6 +126,9 @@ class SCVis {
         this._SPS.setParticles();
     }
 
+    /**
+     * Zoom camera to fit the complete SPS into the field of view
+     */
     private _cameraFitCells(): void {
         let radius = this._SPS.mesh.getBoundingInfo().boundingSphere.radiusWorld;
         let aspectRatio = this._engine.getAspectRatio(this._camera);
@@ -126,12 +140,20 @@ class SCVis {
         this._camera.radius = viewRadius;
     }
 
+    /**
+     * Register before render
+     */
     private _prepRender(): void {
-        if (this._turntable) {
+        if (this.turntable) {
             this._camera.alpha += this._rotationRate;
         }
     }
 
+    /**
+     * Color cells by discrete clusters
+     * @param clusters Array of same length as cells with indices for clusters
+     * @param [clusterNames] Array with sorted cluster names
+     */
     colorByClusters(clusters: number[], clusterNames?: string[]): void {
         this._clusters = clusters;
         let uniqueClusters = clusters.filter((v, i, a) => a.indexOf(v) === i)
@@ -148,8 +170,19 @@ class SCVis {
             this._clusterNames = uniqueClusters.sort((a, b) => a - b).map(String);
         }
         this._updateClusterColors();
+        this._discrete = true;
+        if (this._legend) {
+            this._legend.dispose();
+        }
+        if (this.showLegend) {
+            this._createLegend();
+        }
     }
 
+    /**
+     * Color cells by continuous values
+     * @param values Array of same length as cells
+     */
     colorByValue(values: number[]): void {
         this._colors = chroma.scale(chroma.brewer.Viridis).mode('lch').colors(100);
         for (let i = 0; i < 100; i++) {
@@ -157,8 +190,21 @@ class SCVis {
         }
         this._clusters = this._evenBins(values);
         this._updateClusterColors();
+        this._discrete = false;
+        this._clusterNames = [Math.min.apply(Math, values), Math.max.apply(Math, values)]
+        if (this._legend) {
+            this._legend.dispose();
+        }
+        if (this.showLegend) {
+            this._createLegend();
+        }
     }
 
+    /**
+     * Puts values into evenly spaced bins defined by the number of bins.
+     * @param vals values to place into bins
+     * @param binCount number of bins to create
+     */
     private _evenBins(vals: number[], binCount: number = 100): number[] {
         let N = vals.length;
         let binSize = Math.floor(N / binCount);
@@ -179,6 +225,120 @@ class SCVis {
         return binned;
     }
 
+    private _createLegend(): void {
+        // create fullscreen GUI texture
+        let advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+        // create grid for placing legend in correct position
+        let grid = new BABYLON.GUI.Grid();
+        advancedTexture.addControl(grid);
+
+        // main position of legend (right middle)
+        grid.addColumnDefinition(0.8);
+        grid.addColumnDefinition(0.2);
+        grid.addRowDefinition(0.25);
+
+        // for continuous measures display viridis color bar and max and min values.
+        if (!this._discrete) {
+            grid.addRowDefinition(300, true);
+            grid.addRowDefinition(0.25);
+            
+            let innerGrid = new BABYLON.GUI.Grid();
+            innerGrid.addColumnDefinition(0.2);
+            innerGrid.addColumnDefinition(0.8);
+            innerGrid.addRowDefinition(1);
+            grid.addControl(innerGrid, 1, 1);
+            
+            // viridis color bar
+            let image = new BABYLON.GUI.Image("colorbar", "viridis.png");
+            image.height = "300px";
+            image.stretch = BABYLON.GUI.Image.STRETCH_UNIFORM;
+            innerGrid.addControl(image, 0, 0);
+            
+            // label text
+            let labelGrid = new BABYLON.GUI.Grid();
+            labelGrid.addColumnDefinition(1);
+            labelGrid.addRowDefinition(0.05);
+            labelGrid.addRowDefinition(0.9);
+            labelGrid.addRowDefinition(0.05);
+            innerGrid.addControl(labelGrid, 0, 1);
+            
+            let minText = new BABYLON.GUI.TextBlock();
+            minText.text = this._clusterNames[0].toString();
+            minText.color = "black";
+            minText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            labelGrid.addControl(minText, 2, 0);
+            
+            let maxText = new BABYLON.GUI.TextBlock();
+            maxText.text = this._clusterNames[1].toString();
+            maxText.color = "black";
+            maxText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            labelGrid.addControl(maxText, 0, 0);
+        } else {
+            // number of clusters
+            var n = this._clusterNames.length;
+            // adjust height to fit all legend entries
+            if (n > 12) {
+                grid.addRowDefinition(300, true);
+            } else {
+                grid.addRowDefinition(25 * n, true);
+            }
+            grid.addRowDefinition(0.25);
+    
+            // inner Grid contains legend rows and columns for color and text
+            var innerGrid = new BABYLON.GUI.Grid();
+            // two legend columns when more than 15 colors
+            if (n > 12) {
+                innerGrid.addColumnDefinition(0.1);
+                innerGrid.addColumnDefinition(0.4);
+                innerGrid.addColumnDefinition(0.1);
+                innerGrid.addColumnDefinition(0.4);
+            } else {
+                innerGrid.addColumnDefinition(0.2);
+                innerGrid.addColumnDefinition(0.8);
+            }
+            for (let i = 0; i < n && i < 13; i++) {
+                if (n > 12) {
+                    innerGrid.addRowDefinition(1 / 12);
+                } else {
+                    innerGrid.addRowDefinition(1 / n);
+                }
+            }
+            grid.addControl(innerGrid, 1, 1);
+    
+            // add color box and legend text
+            for (let i = 0; i < n; i++) {
+                // color
+                var legendColor = new BABYLON.GUI.Rectangle();
+                legendColor.background = this._colors[i];
+                legendColor.thickness = 0;
+                legendColor.width = "20px";
+                legendColor.height = "20px";
+                // use second column for many entries
+                if (i > 11) {
+                    innerGrid.addControl(legendColor, i - 12, 2);
+                } else {
+                    innerGrid.addControl(legendColor, i, 0);
+                }
+                // text
+                var legendText = new BABYLON.GUI.TextBlock();
+                legendText.text = this._clusterNames[i].toString();
+                legendText.color = "black";
+                legendText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+                // use second column for many entries
+                if (i > 11) {
+                    innerGrid.addControl(legendText, i - 12, 3);
+                } else {
+                    innerGrid.addControl(legendText, i, 1);
+                }
+            }
+        }
+        this._legend = advancedTexture;
+    }
+
+    /**
+     * Start rendering the scene
+     */
     doRender(): void {
         this._engine.runRenderLoop(() => {
             this._scene.render();

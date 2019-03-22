@@ -1,0 +1,12 @@
+{
+    "files": [
+        "3dSCVis.ts"
+    ],
+    "compilerOptions": {
+        "target": "es5",
+        "lib": [
+            "esnext",
+            "dom"
+        ]
+    }
+}
