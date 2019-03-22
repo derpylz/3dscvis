@@ -8,11 +8,17 @@ var SCVis = /** @class */ (function () {
      * @param coords Array of arrays containing the 3d coordinates of the cells
      */
     function SCVis(canvasElement, coords) {
+        this._showLegend = true;
         this._size = 0.1;
-        this._setTimeSeries = false;
         this._rotationRate = 0.01;
+        this._showSelectCube = false;
+        this._isTimeSeries = false;
+        this._setTimeSeries = false;
+        this._playingTimeSeries = false;
+        this._timeSeriesIndex = 0;
+        this._counter = 0;
+        this._timeSeriesSpeed = 1;
         this.turntable = false;
-        this.showLegend = true;
         this._coords = coords;
         this._canvas = document.getElementById(canvasElement);
         this._engine = new BABYLON.Engine(this._canvas, true);
@@ -39,7 +45,44 @@ var SCVis = /** @class */ (function () {
         // Solid particle system with cell embedding
         this._createCellParticles();
         this._cameraFitCells();
+        this._createSelectionCube();
         this._scene.registerBeforeRender(this._prepRender.bind(this));
+    };
+    /**
+     * Register before render
+     */
+    SCVis.prototype._prepRender = function () {
+        if (this.turntable) {
+            this._camera.alpha += this._rotationRate;
+        }
+        if (this._isTimeSeries) {
+            if (this._playingTimeSeries) {
+                if (this._setTimeSeries) {
+                    if (this._counter >= this._timeSeriesSpeed) {
+                        this._timeSeriesIndex += 1;
+                        this._updateTimeSeriesCells();
+                        this._counter = 0;
+                    }
+                    else {
+                        this._counter += 1;
+                    }
+                }
+                else {
+                    this._setTimeSeries = true;
+                    this._setAllCellsInvisible();
+                    this._counter = 0;
+                }
+            }
+            else {
+                if (this._setTimeSeries) {
+                    this._setTimeSeries = false;
+                }
+            }
+        }
+        else {
+            this._playingTimeSeries = false;
+            this._setTimeSeries = false;
+        }
     };
     /**
      * Positions spheres according to coordinates in a SPS
@@ -80,12 +123,55 @@ var SCVis = /** @class */ (function () {
         SPS.computeBoundingBox = false;
         this._SPS = SPS;
     };
+    SCVis.prototype._resetSPS = function () {
+        this._SPS.dispose();
+        this._createCellParticles();
+        this._selectionCube.dispose();
+        this._selectionGizmo.dispose();
+        this._createSelectionCube();
+    };
     /**
      * Make all cells transparent for time series start
      */
     SCVis.prototype._setAllCellsInvisible = function () {
         for (var i = 0; i < this._SPS.nbParticles; i++) {
             this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
+        }
+        this._SPS.setParticles();
+    };
+    SCVis.prototype._updateTimeSeriesCells = function () {
+        // reset timeSeriesIndex to 0 to loop
+        if (this._timeSeriesIndex > Math.max.apply(Math, this._clusters)) {
+            this._timeSeriesIndex = 0;
+            var indexBefore = Math.max.apply(Math, this._clusters);
+            var indexBefore2 = indexBefore - 1;
+        }
+        else {
+            var indexBefore = this._timeSeriesIndex - 1;
+            if (indexBefore < 0) {
+                indexBefore = Math.max.apply(Math, this._clusters);
+            }
+            var indexBefore2 = indexBefore - 1;
+            if (indexBefore2 < 0) {
+                indexBefore2 = Math.max.apply(Math, this._clusters);
+            }
+        }
+        for (var i = 0; i < this._SPS.nbParticles; i++) {
+            // cells of current time series index are set visible, all other invisible
+            if (this._clusters[i] == this._timeSeriesIndex) {
+                this._SPS.particles[i].color = BABYLON.Color4.FromHexString(this._colors[this._timeSeriesIndex]);
+            }
+            else if (this._clusters[i] == indexBefore) {
+                if (this._setTimeSeries) {
+                    this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.5);
+                }
+                else {
+                    this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
+                }
+            }
+            else if (this._clusters[i] == indexBefore2 && this._setTimeSeries) {
+                this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
+            }
         }
         this._SPS.setParticles();
     };
@@ -111,13 +197,76 @@ var SCVis = /** @class */ (function () {
         var viewRadius = Math.abs(radius / Math.sin(halfMinFov));
         this._camera.radius = viewRadius;
     };
-    /**
-     * Register before render
-     */
-    SCVis.prototype._prepRender = function () {
-        if (this.turntable) {
-            this._camera.alpha += this._rotationRate;
+    SCVis.prototype._createSelectionCube = function () {
+        var _this = this;
+        // create cube mesh
+        var selCube = BABYLON.MeshBuilder.CreateBox("selectionCube", {
+            height: 1,
+            width: 1,
+            depth: 1,
+            updatable: true,
+            sideOrientation: BABYLON.Mesh.FRONTSIDE
+        }, this._scene);
+        // cube itself should be barely visible, the bounding box widget is important
+        var mat = new BABYLON.StandardMaterial("selectionMat", this._scene);
+        mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+        mat.alpha = 0.1;
+        selCube.material = mat;
+        // create gizmo
+        var utilLayer = new BABYLON.UtilityLayerRenderer(this._scene);
+        var gizmo = new BABYLON.BoundingBoxGizmo(new BABYLON.Color3(1, 0, 0), utilLayer);
+        gizmo.setEnabledRotationAxis("");
+        gizmo.scaleBoxSize = 0.5;
+        gizmo.attachedMesh = selCube;
+        // Add draggin behaviour
+        var boxDragBehavior = new BABYLON.PointerDragBehavior();
+        boxDragBehavior.onDragEndObservable.add(function () {
+            _this._selectCellsInCube();
+        });
+        selCube.addBehavior(boxDragBehavior);
+        // Add scaling behaviour
+        gizmo.onScaleBoxDragEndObservable.add(function () {
+            _this._selectCellsInCube();
+        });
+        // by default do not show selection Cube
+        selCube.visibility = 0;
+        gizmo.gizmoLayer.shouldRender = false;
+        this._selectionCube = selCube;
+        this._selectionGizmo = gizmo;
+    };
+    SCVis.prototype._selectCellsInCube = function () {
+        if (this._showSelectCube) {
+            var boundInfo = this._selectionCube.getBoundingInfo().boundingBox;
+            // array for storing selected cells
+            var cellsInside = [];
+            for (var i = 0; i < this._SPS.nbParticles; i++) {
+                var isInside = this._particleInBox(this._SPS.particles[i].position, boundInfo.minimumWorld, boundInfo.maximumWorld);
+                cellsInside.push(isInside);
+                // cells inside box are colored red, all others are colored blue
+                if (isInside) {
+                    this._SPS.particles[i].color = new BABYLON.Color4(1, 0, 0, 1);
+                }
+                else {
+                    this._SPS.particles[i].color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
+                }
+            }
+            this._SPS.setParticles();
+            this.selection = cellsInside;
         }
+    };
+    SCVis.prototype._particleInBox = function (position, min, max) {
+        // checking against bounding box is sufficient,
+        // no rotation is allowed
+        if (position.x < min.x || position.x > max.x) {
+            return false;
+        }
+        if (position.y < min.y || position.y > max.y) {
+            return false;
+        }
+        if (position.z < min.z || position.z > max.z) {
+            return false;
+        }
+        return true;
     };
     /**
      * Color cells by discrete clusters
@@ -145,8 +294,11 @@ var SCVis = /** @class */ (function () {
         if (this._legend) {
             this._legend.dispose();
         }
-        if (this.showLegend) {
+        if (this._showLegend) {
             this._createLegend();
+        }
+        if (this._isTimeSeries) {
+            this._updateTimeSeriesCells();
         }
     };
     /**
@@ -165,8 +317,11 @@ var SCVis = /** @class */ (function () {
         if (this._legend) {
             this._legend.dispose();
         }
-        if (this.showLegend) {
+        if (this._showLegend) {
             this._createLegend();
+        }
+        if (this._isTimeSeries) {
+            this._updateTimeSeriesCells();
         }
     };
     /**
@@ -194,6 +349,9 @@ var SCVis = /** @class */ (function () {
         }
         return binned;
     };
+    /**
+     * Creates a color legend for the plot
+     */
     SCVis.prototype._createLegend = function () {
         // create fullscreen GUI texture
         var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
@@ -299,6 +457,48 @@ var SCVis = /** @class */ (function () {
             }
         }
         this._legend = advancedTexture;
+    };
+    SCVis.prototype.showLegend = function () {
+        if (this._clusters && this._clusterNames) {
+            this._showLegend = true;
+            this._createLegend;
+        }
+    };
+    SCVis.prototype.hideLegend = function () {
+        if (this._legend) {
+            this._legend.dispose();
+        }
+        this._showLegend = false;
+    };
+    SCVis.prototype.showSelectionCube = function () {
+        this._showSelectCube = true;
+        this._selectionCube.visibility = 1;
+        this._selectionGizmo.gizmoLayer.shouldRender = true;
+    };
+    SCVis.prototype.hideSelectionCube = function () {
+        this._showSelectCube = false;
+        this._selectionCube.visibility = 0;
+        this._selectionGizmo.gizmoLayer.shouldRender = false;
+    };
+    SCVis.prototype.enableTimeSeries = function () {
+        this._isTimeSeries = true;
+    };
+    SCVis.prototype.disableTimeSeries = function () {
+        this._isTimeSeries = false;
+    };
+    SCVis.prototype.playTimeSeries = function () {
+        this._playingTimeSeries = true;
+    };
+    SCVis.prototype.pauseTimeSeries = function () {
+        this._playingTimeSeries = false;
+    };
+    SCVis.prototype.setTimeSeriesSpeed = function (speed) {
+        this._timeSeriesSpeed = speed;
+    };
+    SCVis.prototype.setTimeSeriesIndex = function (index) {
+        this._timeSeriesIndex = index;
+        this._setAllCellsInvisible();
+        this._updateTimeSeriesCells();
     };
     /**
      * Start rendering the scene

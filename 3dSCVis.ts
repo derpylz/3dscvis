@@ -18,11 +18,16 @@ class SCVis {
     private _showLegend: boolean = true;
     private _SPS: BABYLON.SolidParticleSystem;
     private _size: number = 0.1;
-    private _setTimeSeries: boolean = false;
     private _rotationRate: number = 0.01;
     private _selectionCube: BABYLON.Mesh;
     private _selectionGizmo: BABYLON.BoundingBoxGizmo;
     private _showSelectCube: boolean = false;
+    private _isTimeSeries: boolean = false;
+    private _setTimeSeries: boolean = false;
+    private _playingTimeSeries: boolean = false;
+    private _timeSeriesIndex: number = 0;
+    private _counter: number = 0;
+    private _timeSeriesSpeed: number = 1;
 
     turntable: boolean = false;
 
@@ -70,6 +75,45 @@ class SCVis {
         this._createSelectionCube();
 
         this._scene.registerBeforeRender(this._prepRender.bind(this));
+
+        this._scene.registerAfterRender(this._afterRender.bind(this));
+    }
+
+    /**
+     * Register before render
+     */
+    private _prepRender(): void {
+        if (this.turntable) {
+            this._camera.alpha += this._rotationRate;
+        }
+        if (this._isTimeSeries) {
+            if (this._playingTimeSeries) {
+                if (this._setTimeSeries) {
+                    if (this._counter >= this._timeSeriesSpeed) {
+                        this._timeSeriesIndex += 1;
+                        this._updateTimeSeriesCells();
+                        this._counter = 0;
+                    } else {
+                        this._counter += 1;
+                    }
+                } else {
+                    this._setTimeSeries = true;
+                    this._setAllCellsInvisible();
+                    this._counter = 0;
+                }
+            } else {
+                if (this._setTimeSeries) {
+                    this._setTimeSeries = false;
+                }
+            }
+        } else {
+            this._playingTimeSeries = false;
+            this._setTimeSeries = false;
+        }
+    }
+
+    private _afterRender(): void {
+        
     }
 
     /**
@@ -123,6 +167,40 @@ class SCVis {
         this._SPS.setParticles();
     }
 
+    private _updateTimeSeriesCells(): void {
+        // reset timeSeriesIndex to 0 to loop
+        if (this._timeSeriesIndex > Math.max.apply(Math, this._clusters)) {
+            this._timeSeriesIndex = 0;
+            var indexBefore = Math.max.apply(Math, this._clusters) as number;
+            var indexBefore2 = indexBefore - 1;
+        } else {
+            var indexBefore = this._timeSeriesIndex - 1;
+            if (indexBefore < 0) {
+                indexBefore = Math.max.apply(Math, this._clusters);
+            }
+            var indexBefore2 = indexBefore - 1
+            if (indexBefore2 < 0) {
+                indexBefore2 = Math.max.apply(Math, this._clusters);
+            }
+        }
+
+        for (var i = 0; i < this._SPS.nbParticles; i++) {
+            // cells of current time series index are set visible, all other invisible
+            if (this._clusters[i] == this._timeSeriesIndex) {
+                this._SPS.particles[i].color = BABYLON.Color4.FromHexString(this._colors[this._timeSeriesIndex]);
+            } else if (this._clusters[i] == indexBefore) {
+                if (this._setTimeSeries) {
+                    this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.5);
+                } else {
+                    this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
+                }
+            } else if (this._clusters[i] == indexBefore2 && this._setTimeSeries) {
+                this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
+            }
+        }
+        this._SPS.setParticles();
+    }
+
     /**
      * Color cells according to this._clusters and this._colors
      */
@@ -145,15 +223,6 @@ class SCVis {
         }
         let viewRadius = Math.abs(radius / Math.sin(halfMinFov));
         this._camera.radius = viewRadius;
-    }
-
-    /**
-     * Register before render
-     */
-    private _prepRender(): void {
-        if (this.turntable) {
-            this._camera.alpha += this._rotationRate;
-        }
     }
 
     private _createSelectionCube(): void {
@@ -262,6 +331,9 @@ class SCVis {
         if (this._showLegend) {
             this._createLegend();
         }
+        if (this._isTimeSeries) {
+            this._updateTimeSeriesCells();
+        }
     }
 
     /**
@@ -282,6 +354,9 @@ class SCVis {
         }
         if (this._showLegend) {
             this._createLegend();
+        }
+        if (this._isTimeSeries) {
+            this._updateTimeSeriesCells();
         }
     }
 
@@ -448,6 +523,32 @@ class SCVis {
         this._showSelectCube = false;
         this._selectionCube.visibility = 0;
         this._selectionGizmo.gizmoLayer.shouldRender = false;
+    }
+
+    enableTimeSeries(): void {
+        this._isTimeSeries = true;
+    }
+
+    disableTimeSeries(): void {
+        this._isTimeSeries = false;
+    }
+
+    playTimeSeries(): void {
+        this._playingTimeSeries = true;
+    }
+
+    pauseTimeSeries(): void {
+        this._playingTimeSeries = false;
+    }
+
+    setTimeSeriesSpeed(speed: number) {
+        this._timeSeriesSpeed = speed;
+    }
+
+    setTimeSeriesIndex(index: number) {
+        this._timeSeriesIndex = index;
+        this._setAllCellsInvisible();
+        this._updateTimeSeriesCells();
     }
 
     /**

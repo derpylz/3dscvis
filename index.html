@@ -4386,8 +4386,11 @@
             //     },
             //     500
             // );
-            // vis.colorByClusters(clusters);
-            vis.colorByValue(Array.from({length: clLength}, () => Math.random() * 10));
+            vis.colorByClusters(clusters);
+            // vis.colorByValue(Array.from({length: clLength}, () => Math.random() * 10));
+            vis.enableTimeSeries();
+            // vis.playTimeSeries();
+            vis.setTimeSeriesIndex(5);
         });
     </script>
 </head>
