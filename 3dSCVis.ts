@@ -26,6 +26,8 @@ class SCVis {
 
     turntable: boolean = false;
 
+    selection: number[];
+
     /**
      * Initialize the 3d visualization
      * @param canvasElement ID of the canvas element in the dom
@@ -213,6 +215,7 @@ class SCVis {
                 }
             }
             this._SPS.setParticles();
+            this.selection = cellsInside;
         }
     }
 
