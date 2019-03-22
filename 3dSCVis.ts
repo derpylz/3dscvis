@@ -15,13 +15,16 @@ class SCVis {
     private _colors: string[];
     private _discrete: boolean;
     private _legend: BABYLON.GUI.AdvancedDynamicTexture;
+    private _showLegend: boolean = true;
     private _SPS: BABYLON.SolidParticleSystem;
     private _size: number = 0.1;
     private _setTimeSeries: boolean = false;
     private _rotationRate: number = 0.01;
-    
+    private _selectionCube: BABYLON.Mesh;
+    private _selectionGizmo: BABYLON.BoundingBoxGizmo;
+    private _showSelectCube: boolean = false;
+
     turntable: boolean = false;
-    showLegend: boolean = true;
 
     /**
      * Initialize the 3d visualization
@@ -61,6 +64,8 @@ class SCVis {
         this._createCellParticles();
 
         this._cameraFitCells();
+
+        this._createSelectionCube();
 
         this._scene.registerBeforeRender(this._prepRender.bind(this));
     }
@@ -149,6 +154,83 @@ class SCVis {
         }
     }
 
+    private _createSelectionCube(): void {
+        // create cube mesh
+        let selCube = BABYLON.MeshBuilder.CreateBox("selectionCube", {
+            height: 1,
+            width: 1,
+            depth: 1,
+            updatable: true,
+            sideOrientation: BABYLON.Mesh.FRONTSIDE
+        }, this._scene);
+
+        // cube itself should be barely visible, the bounding box widget is important
+        let mat = new BABYLON.StandardMaterial("selectionMat", this._scene);
+        mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+        mat.alpha = 0.1;
+        selCube.material = mat;
+
+        // create gizmo
+        let utilLayer = new BABYLON.UtilityLayerRenderer(this._scene);
+        let gizmo = new BABYLON.BoundingBoxGizmo(new BABYLON.Color3(1, 0, 0), utilLayer);
+        gizmo.setEnabledRotationAxis("");
+        gizmo.scaleBoxSize = 0.5;
+        gizmo.attachedMesh = selCube;
+
+        // Add draggin behaviour
+        var boxDragBehavior = new BABYLON.PointerDragBehavior();
+        boxDragBehavior.onDragEndObservable.add(() => {
+            this._selectCellsInCube();
+        });
+
+        selCube.addBehavior(boxDragBehavior);
+
+        // Add scaling behaviour
+        gizmo.onScaleBoxDragEndObservable.add(() => {
+            this._selectCellsInCube();
+        });
+
+        // by default do not show selection Cube
+        selCube.visibility = 0;
+        gizmo.gizmoLayer.shouldRender = false;
+        this._selectionCube = selCube;
+        this._selectionGizmo = gizmo;
+    }
+
+    private _selectCellsInCube(): void {
+        if (this._showSelectCube) {
+            var boundInfo = this._selectionCube.getBoundingInfo().boundingBox;
+            // array for storing selected cells
+            let cellsInside = [];
+            for (var i = 0; i < this._SPS.nbParticles; i++) {
+                let isInside = this._particleInBox(this._SPS.particles[i].position, boundInfo.minimumWorld, boundInfo.maximumWorld);
+                cellsInside.push(isInside);
+                // cells inside box are colored red, all others are colored blue
+                if (isInside) {
+                    this._SPS.particles[i].color = new BABYLON.Color4(1, 0, 0, 1);
+                } else {
+                    this._SPS.particles[i].color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
+                }
+            }
+            this._SPS.setParticles();
+        }
+    }
+
+    private _particleInBox(position: BABYLON.Vector3, min: BABYLON.Vector3, max: BABYLON.Vector3): boolean {
+        // checking against bounding box is sufficient,
+        // no rotation is allowed
+        if (position.x < min.x || position.x > max.x) {
+            return false;
+        }
+        if (position.y < min.y || position.y > max.y) {
+            return false;
+        }
+        if (position.z < min.z || position.z > max.z) {
+            return false;
+        }
+        return true;
+    }
+
     /**
      * Color cells by discrete clusters
      * @param clusters Array of same length as cells with indices for clusters
@@ -174,7 +256,7 @@ class SCVis {
         if (this._legend) {
             this._legend.dispose();
         }
-        if (this.showLegend) {
+        if (this._showLegend) {
             this._createLegend();
         }
     }
@@ -195,7 +277,7 @@ class SCVis {
         if (this._legend) {
             this._legend.dispose();
         }
-        if (this.showLegend) {
+        if (this._showLegend) {
             this._createLegend();
         }
     }
@@ -225,6 +307,9 @@ class SCVis {
         return binned;
     }
 
+    /**
+     * Creates a color legend for the plot
+     */
     private _createLegend(): void {
         // create fullscreen GUI texture
         let advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
@@ -242,19 +327,19 @@ class SCVis {
         if (!this._discrete) {
             grid.addRowDefinition(300, true);
             grid.addRowDefinition(0.25);
-            
+
             let innerGrid = new BABYLON.GUI.Grid();
             innerGrid.addColumnDefinition(0.2);
             innerGrid.addColumnDefinition(0.8);
             innerGrid.addRowDefinition(1);
             grid.addControl(innerGrid, 1, 1);
-            
+
             // viridis color bar
             let image = new BABYLON.GUI.Image("colorbar", "viridis.png");
             image.height = "300px";
             image.stretch = BABYLON.GUI.Image.STRETCH_UNIFORM;
             innerGrid.addControl(image, 0, 0);
-            
+
             // label text
             let labelGrid = new BABYLON.GUI.Grid();
             labelGrid.addColumnDefinition(1);
@@ -262,13 +347,13 @@ class SCVis {
             labelGrid.addRowDefinition(0.9);
             labelGrid.addRowDefinition(0.05);
             innerGrid.addControl(labelGrid, 0, 1);
-            
+
             let minText = new BABYLON.GUI.TextBlock();
             minText.text = this._clusterNames[0].toString();
             minText.color = "black";
             minText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
             labelGrid.addControl(minText, 2, 0);
-            
+
             let maxText = new BABYLON.GUI.TextBlock();
             maxText.text = this._clusterNames[1].toString();
             maxText.color = "black";
@@ -284,7 +369,7 @@ class SCVis {
                 grid.addRowDefinition(25 * n, true);
             }
             grid.addRowDefinition(0.25);
-    
+
             // inner Grid contains legend rows and columns for color and text
             var innerGrid = new BABYLON.GUI.Grid();
             // two legend columns when more than 15 colors
@@ -305,7 +390,7 @@ class SCVis {
                 }
             }
             grid.addControl(innerGrid, 1, 1);
-    
+
             // add color box and legend text
             for (let i = 0; i < n; i++) {
                 // color
@@ -334,6 +419,32 @@ class SCVis {
             }
         }
         this._legend = advancedTexture;
+    }
+
+    showLegend(): void {
+        if (this._clusters && this._clusterNames) {
+            this._showLegend = true;
+            this._createLegend;
+        }
+    }
+
+    hideLegend(): void {
+        if (this._legend) {
+            this._legend.dispose();
+        }
+        this._showLegend = false;
+    }
+
+    showSelectionCube(): void {
+        this._showSelectCube = true;
+        this._selectionCube.visibility = 1;
+        this._selectionGizmo.gizmoLayer.shouldRender = true;
+    }
+
+    hideSelectionCube(): void {
+        this._showSelectCube = false;
+        this._selectionCube.visibility = 0;
+        this._selectionGizmo.gizmoLayer.shouldRender = false;
     }
 
     /**
