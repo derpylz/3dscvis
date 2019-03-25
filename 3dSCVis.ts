@@ -491,13 +491,13 @@ class SCVis {
             innerGrid.addControl(labelGrid, 0, 1);
 
             let minText = new BABYLON.GUI.TextBlock();
-            minText.text = this._clusterNames[0].toString();
+            minText.text = parseFloat(this._clusterNames[0]).toFixed(4).toString();
             minText.color = "black";
             minText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
             labelGrid.addControl(minText, 2, 0);
 
             let maxText = new BABYLON.GUI.TextBlock();
-            maxText.text = this._clusterNames[1].toString();
+            maxText.text = parseFloat(this._clusterNames[1]).toFixed(4).toString();
             maxText.color = "black";
             maxText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
             labelGrid.addControl(maxText, 0, 0);
