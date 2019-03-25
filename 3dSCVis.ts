@@ -30,7 +30,7 @@ class SCVis {
     private _timeSeriesIndex: number = 0;
     private _counter: number = 0;
     private _timeSeriesSpeed: number = 1;
-    private _capturer;
+    private _capturer: CCapture;
     private _prevTimeSeriesSpeed: number;
     private _wasTurning: boolean = false;
     private _record: boolean = false;
