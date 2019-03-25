@@ -1,6 +1,7 @@
 /// <reference path="babylon.d.ts" />
 /// <reference path="babylon.gui.d.ts" />
 /// <reference path="chroma-js.d.ts" />
+/// <reference path="ccapture.d.ts" />
 var SCVis = /** @class */ (function () {
     /**
      * Initialize the 3d visualization
@@ -18,6 +19,9 @@ var SCVis = /** @class */ (function () {
         this._timeSeriesIndex = 0;
         this._counter = 0;
         this._timeSeriesSpeed = 1;
+        this._wasTurning = false;
+        this._record = false;
+        this._turned = 0;
         this.turntable = false;
         this._coords = coords;
         this._canvas = document.getElementById(canvasElement);
@@ -47,6 +51,7 @@ var SCVis = /** @class */ (function () {
         this._cameraFitCells();
         this._createSelectionCube();
         this._scene.registerBeforeRender(this._prepRender.bind(this));
+        this._scene.registerAfterRender(this._afterRender.bind(this));
     };
     /**
      * Register before render
@@ -82,6 +87,69 @@ var SCVis = /** @class */ (function () {
         else {
             this._playingTimeSeries = false;
             this._setTimeSeries = false;
+        }
+    };
+    SCVis.prototype._afterRender = function () {
+        if (this._record) {
+            if (this._turned == 0) {
+                // remove shading by setting all lights to 1 intensity
+                // this reduces the colorbanding issue of gif saving
+                this._hl2.diffuse = new BABYLON.Color3(1, 1, 1);
+                // create capturer, enable turning
+                if (this._discrete) {
+                    var worker = './';
+                }
+                else {
+                    var worker = './ditherWorker/';
+                }
+                this._capturer = new CCapture({
+                    format: 'gif',
+                    framerate: 30,
+                    workersPath: worker,
+                    verbose: false,
+                    display: true,
+                    quality: 50,
+                    workers: 8
+                });
+                this._capturer.start();
+                this._rotationRate = 0.02;
+                if (this._playingTimeSeries) {
+                    this._setAllCellsInvisible();
+                    this._timeSeriesIndex = 0;
+                    this._counter = 0;
+                    this._updateTimeSeriesCells();
+                    var nSteps = Math.max.apply(Math, this._clusters) + 1;
+                    this._prevTimeSeriesSpeed = this._timeSeriesSpeed;
+                    this._timeSeriesSpeed = Math.floor((2 * Math.PI / this._rotationRate / nSteps) - 1);
+                }
+                // to return turntable option to its initial state after recording
+                if (this.turntable) {
+                    this._wasTurning = true;
+                }
+                else {
+                    this.turntable = true;
+                }
+            }
+            if (this._turned < 2 * Math.PI) {
+                // while recording, count rotation and capture screenshots
+                this._turned += this._rotationRate;
+                this._capturer.capture(this._canvas);
+            }
+            else {
+                // after capturing 360°, stop capturing and save gif
+                this._record = false;
+                this._capturer.stop();
+                this._capturer.save();
+                this._turned = 0;
+                this._rotationRate = 0.01;
+                this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
+                if (!this._wasTurning) {
+                    this.turntable = false;
+                }
+                if (this._playingTimeSeries) {
+                    this._timeSeriesSpeed = this._prevTimeSeriesSpeed;
+                }
+            }
         }
     };
     /**
@@ -122,13 +190,6 @@ var SCVis = /** @class */ (function () {
         SPS.setParticles();
         SPS.computeBoundingBox = false;
         this._SPS = SPS;
-    };
-    SCVis.prototype._resetSPS = function () {
-        this._SPS.dispose();
-        this._createCellParticles();
-        this._selectionCube.dispose();
-        this._selectionGizmo.dispose();
-        this._createSelectionCube();
     };
     /**
      * Make all cells transparent for time series start
@@ -499,6 +560,9 @@ var SCVis = /** @class */ (function () {
         this._timeSeriesIndex = index;
         this._setAllCellsInvisible();
         this._updateTimeSeriesCells();
+    };
+    SCVis.prototype.startRecording = function () {
+        this._record = true;
     };
     /**
      * Start rendering the scene

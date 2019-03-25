@@ -7,6 +7,7 @@
     <!-- Link to the last version of BabylonJS -->
     <script src="babylon.custom.js"></script>
     <script src="chroma.min.js"></script>
+    <script src="CCapture.all.min.js"></script>
     <script src="3dSCVis.js"></script>
 
     <style>
@@ -4390,7 +4391,9 @@
             // vis.colorByValue(Array.from({length: clLength}, () => Math.random() * 10));
             vis.enableTimeSeries();
             // vis.playTimeSeries();
-            vis.setTimeSeriesIndex(5);
+            vis.setTimeSeriesIndex(0);
+            // vis.setTimeSeriesSpeed(1)
+            vis.startRecording();
         });
     </script>
 </head>
