@@ -33,6 +33,8 @@ declare class SCVis {
     private _wasTurning;
     private _record;
     private _turned;
+    private _cellPicking;
+    private _selectionCallback;
     turntable: boolean;
     selection: number[];
     /**
@@ -45,6 +47,7 @@ declare class SCVis {
      * Create the scene with camera, lights and the solid particle system
      */
     createScene(): void;
+    private _cellPicker;
     /**
      * Register before render
      */
@@ -57,6 +60,7 @@ declare class SCVis {
      * Positions spheres according to coordinates in a SPS
      */
     private _createCellParticles;
+    private _updateCellSize;
     /**
      * Make all cells transparent for time series start
      */
@@ -119,8 +123,9 @@ declare class SCVis {
     hideLegend(): void;
     /**
      * Show a cube for interactive selection of cells
+     * @param [selectionCallback] Function that receives selection
      */
-    showSelectionCube(): void;
+    showSelectionCube(selectionCallback?: (selection: number[]) => any): void;
     /**
      * Hide the selection cube
      */
@@ -155,6 +160,20 @@ declare class SCVis {
      * Record an animated gif of the cell embedding
      */
     startRecording(): void;
+    /**
+     * Enable mouse pointer selection of cells
+     * @param selectionCallback Function that receives selection
+     */
+    enablePicking(selectionCallback?: (selection: number[]) => any): void;
+    /**
+     * disable mouse pointer selection
+     */
+    disablePicking(): void;
+    /**
+     * Change size of cells
+     * @param size Cell size, default = 1
+     */
+    changeCellSize(size: number): void;
     /**
      * Start rendering the scene
      */

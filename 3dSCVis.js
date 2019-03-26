@@ -10,7 +10,7 @@ var SCVis = /** @class */ (function () {
      */
     function SCVis(canvasElement, coords) {
         this._showLegend = true;
-        this._size = 0.1;
+        this._size = 1;
         this._rotationRate = 0.01;
         this._showSelectCube = false;
         this._isTimeSeries = false;
@@ -22,6 +22,8 @@ var SCVis = /** @class */ (function () {
         this._wasTurning = false;
         this._record = false;
         this._turned = 0;
+        this._cellPicking = false;
+        this._selectionCallback = function (selection) { return false; };
         this.turntable = false;
         this._coords = coords;
         this._canvas = document.getElementById(canvasElement);
@@ -52,6 +54,24 @@ var SCVis = /** @class */ (function () {
         this._createSelectionCube();
         this._scene.registerBeforeRender(this._prepRender.bind(this));
         this._scene.registerAfterRender(this._afterRender.bind(this));
+        this._scene.onPointerDown = this._cellPicker.bind(this);
+    };
+    SCVis.prototype._cellPicker = function (_evt, pickResult) {
+        if (this._cellPicking) {
+            var faceId = pickResult.faceId;
+            if (faceId == -1) {
+                return;
+            }
+            var idx = this._SPS.pickedParticles[faceId].idx;
+            for (var i = 0; i < this._SPS.nbParticles; i++) {
+                this._SPS.particles[i].color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
+            }
+            var p = this._SPS.particles[idx];
+            p.color = new BABYLON.Color4(1, 0, 0, 1);
+            this._SPS.setParticles();
+            this.selection = [idx];
+            this._selectionCallback(this.selection);
+        }
     };
     /**
      * Register before render
@@ -160,10 +180,11 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype._createCellParticles = function () {
         // prototype cell
-        var cell = BABYLON.Mesh.CreateSphere("sphere", 4, this._size, this._scene);
+        var cell = BABYLON.Mesh.CreateSphere("sphere", 4, this._size * 0.1, this._scene);
         // particle system
         var SPS = new BABYLON.SolidParticleSystem('SPS', this._scene, {
-            updatable: true
+            updatable: true,
+            isPickable: true
         });
         // add all cells to SPS
         SPS.addShape(cell, this._coords.length);
@@ -193,6 +214,14 @@ var SCVis = /** @class */ (function () {
         SPS.setParticles();
         SPS.computeBoundingBox = false;
         this._SPS = SPS;
+    };
+    SCVis.prototype._updateCellSize = function () {
+        for (var i = 0; i < this._SPS.nbParticles; i++) {
+            this._SPS.particles[i].scale.x = this._size;
+            this._SPS.particles[i].scale.y = this._size;
+            this._SPS.particles[i].scale.z = this._size;
+        }
+        this._SPS.setParticles();
     };
     /**
      * Make all cells transparent for time series start
@@ -325,6 +354,7 @@ var SCVis = /** @class */ (function () {
             }
             this._SPS.setParticles();
             this.selection = cellsInside;
+            this._selectionCallback(this.selection);
         }
     };
     /**
@@ -557,11 +587,15 @@ var SCVis = /** @class */ (function () {
     };
     /**
      * Show a cube for interactive selection of cells
+     * @param [selectionCallback] Function that receives selection
      */
-    SCVis.prototype.showSelectionCube = function () {
+    SCVis.prototype.showSelectionCube = function (selectionCallback) {
         this._showSelectCube = true;
         this._selectionCube.visibility = 1;
         this._selectionGizmo.gizmoLayer.shouldRender = true;
+        if (selectionCallback) {
+            this._selectionCallback = selectionCallback;
+        }
     };
     /**
      * Hide the selection cube
@@ -616,6 +650,30 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype.startRecording = function () {
         this._record = true;
+    };
+    /**
+     * Enable mouse pointer selection of cells
+     * @param selectionCallback Function that receives selection
+     */
+    SCVis.prototype.enablePicking = function (selectionCallback) {
+        this._cellPicking = true;
+        if (selectionCallback) {
+            this._selectionCallback = selectionCallback;
+        }
+    };
+    /**
+     * disable mouse pointer selection
+     */
+    SCVis.prototype.disablePicking = function () {
+        this._cellPicking = false;
+    };
+    /**
+     * Change size of cells
+     * @param size Cell size, default = 1
+     */
+    SCVis.prototype.changeCellSize = function (size) {
+        this._size = size;
+        this._updateCellSize();
     };
     /**
      * Start rendering the scene

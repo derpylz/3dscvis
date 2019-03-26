@@ -4563,7 +4563,9 @@
             var vis2 = new SCVis("renderCanvas2", coordinates);
             vis2.createScene();
             vis2.doRender();
+            vis2.changeCellSize(2);
             vis2.showSelectionCube();
+            vis2.enablePicking();
 
             var vis3 = new SCVis("renderCanvas3", coordinates);
             vis3.createScene();
@@ -4614,7 +4616,9 @@
                         var vis = new SCVis("renderCanvas", coordinates);
                         vis.createScene();
                         vis.doRender();
-                        vis.showSelectionCube();
+                        vis.changeCellSize(2);
+                        vis.enablePicking(); // cell selection with mouse
+                        vis.showSelectionCube(); // or with selection cube
                     </code></pre>
                 </td>
                 <td>

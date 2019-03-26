@@ -19,7 +19,7 @@ class SCVis {
     private _legend: BABYLON.GUI.AdvancedDynamicTexture;
     private _showLegend: boolean = true;
     private _SPS: BABYLON.SolidParticleSystem;
-    private _size: number = 0.1;
+    private _size: number = 1;
     private _rotationRate: number = 0.01;
     private _selectionCube: BABYLON.Mesh;
     private _selectionGizmo: BABYLON.BoundingBoxGizmo;
@@ -35,6 +35,8 @@ class SCVis {
     private _wasTurning: boolean = false;
     private _record: boolean = false;
     private _turned: number = 0;
+    private _cellPicking: boolean = false;
+    private _selectionCallback = function (selection: number[]) { return false; };
 
     turntable: boolean = false;
 
@@ -84,6 +86,28 @@ class SCVis {
         this._scene.registerBeforeRender(this._prepRender.bind(this));
 
         this._scene.registerAfterRender(this._afterRender.bind(this));
+
+        this._scene.onPointerDown = this._cellPicker.bind(this);
+    }
+
+    private _cellPicker(_evt: PointerEvent, pickResult: BABYLON.PickingInfo) {
+        if (this._cellPicking) {
+            const faceId = pickResult.faceId;
+            if (faceId == -1) {
+                return;
+            }
+            const idx = this._SPS.pickedParticles[faceId].idx;
+
+            for (let i = 0; i < this._SPS.nbParticles; i++) {
+                this._SPS.particles[i].color = new BABYLON.Color4(0.3, 0.3, 0.8, 1);
+            }
+
+            let p = this._SPS.particles[idx];
+            p.color = new BABYLON.Color4(1, 0, 0, 1);
+            this._SPS.setParticles();
+            this.selection = [idx];
+            this._selectionCallback(this.selection);
+        }
     }
 
     /**
@@ -188,10 +212,11 @@ class SCVis {
      */
     private _createCellParticles(): void {
         // prototype cell
-        let cell = BABYLON.Mesh.CreateSphere("sphere", 4, this._size, this._scene);
+        let cell = BABYLON.Mesh.CreateSphere("sphere", 4, this._size * 0.1, this._scene);
         // particle system
         let SPS = new BABYLON.SolidParticleSystem('SPS', this._scene, {
-            updatable: true
+            updatable: true,
+            isPickable: true
         });
         // add all cells to SPS
         SPS.addShape(cell, this._coords.length);
@@ -222,6 +247,15 @@ class SCVis {
         SPS.setParticles();
         SPS.computeBoundingBox = false;
         this._SPS = SPS;
+    }
+
+    private _updateCellSize(): void {
+        for (let i = 0; i < this._SPS.nbParticles; i++) {
+            this._SPS.particles[i].scale.x = this._size;
+            this._SPS.particles[i].scale.y = this._size;
+            this._SPS.particles[i].scale.z = this._size;
+        }
+        this._SPS.setParticles();
     }
 
     /**
@@ -361,6 +395,7 @@ class SCVis {
             }
             this._SPS.setParticles();
             this.selection = cellsInside;
+            this._selectionCallback(this.selection);
         }
     }
 
@@ -603,11 +638,15 @@ class SCVis {
 
     /**
      * Show a cube for interactive selection of cells
+     * @param [selectionCallback] Function that receives selection
      */
-    showSelectionCube(): void {
+    showSelectionCube(selectionCallback?: (selection: number[]) => any): void {
         this._showSelectCube = true;
         this._selectionCube.visibility = 1;
         this._selectionGizmo.gizmoLayer.shouldRender = true;
+        if (selectionCallback) {
+            this._selectionCallback = selectionCallback;
+        }
     }
 
     /**
@@ -651,7 +690,7 @@ class SCVis {
      * Set speed of time series playback
      * @param speed Delay in frames between steps of time series
      */
-    setTimeSeriesSpeed(speed: number) {
+    setTimeSeriesSpeed(speed: number): void {
         this._timeSeriesSpeed = speed;
     }
 
@@ -659,7 +698,7 @@ class SCVis {
      * Color the cells at the specified time series index
      * @param index Index of time series
      */
-    setTimeSeriesIndex(index: number) {
+    setTimeSeriesIndex(index: number): void {
         this._timeSeriesIndex = index;
         this._setAllCellsInvisible();
         this._updateTimeSeriesCells();
@@ -668,8 +707,35 @@ class SCVis {
     /**
      * Record an animated gif of the cell embedding
      */
-    startRecording() {
+    startRecording(): void {
         this._record = true;
+    }
+
+    /**
+     * Enable mouse pointer selection of cells
+     * @param selectionCallback Function that receives selection
+     */
+    enablePicking(selectionCallback?: (selection: number[]) => any): void {
+        this._cellPicking = true;
+        if (selectionCallback) {
+            this._selectionCallback = selectionCallback;
+        }
+    }
+
+    /**
+     * disable mouse pointer selection
+     */
+    disablePicking(): void {
+        this._cellPicking = false;
+    }
+
+    /**
+     * Change size of cells
+     * @param size Cell size, default = 1
+     */
+    changeCellSize(size: number): void {
+        this._size = size;
+        this._updateCellSize();
     }
 
     /**
