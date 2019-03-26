@@ -89,6 +89,9 @@ var SCVis = /** @class */ (function () {
             this._setTimeSeries = false;
         }
     };
+    /**
+     * Recording a gif after rendering
+     */
     SCVis.prototype._afterRender = function () {
         if (this._record) {
             if (this._turned == 0) {
@@ -200,6 +203,9 @@ var SCVis = /** @class */ (function () {
         }
         this._SPS.setParticles();
     };
+    /**
+     * color cells in time series depending on the current _timeSeriesIndex
+     */
     SCVis.prototype._updateTimeSeriesCells = function () {
         // reset timeSeriesIndex to 0 to loop
         if (this._timeSeriesIndex > Math.max.apply(Math, this._clusters)) {
@@ -258,6 +264,9 @@ var SCVis = /** @class */ (function () {
         var viewRadius = Math.abs(radius / Math.sin(halfMinFov));
         this._camera.radius = viewRadius;
     };
+    /**
+     * Creates a cube with drag controls to select cells in 3d
+     */
     SCVis.prototype._createSelectionCube = function () {
         var _this = this;
         // create cube mesh
@@ -295,6 +304,9 @@ var SCVis = /** @class */ (function () {
         this._selectionCube = selCube;
         this._selectionGizmo = gizmo;
     };
+    /**
+     * color cells inside cube and append their indices to the selection
+     */
     SCVis.prototype._selectCellsInCube = function () {
         if (this._showSelectCube) {
             var boundInfo = this._selectionCube.getBoundingInfo().boundingBox;
@@ -315,6 +327,12 @@ var SCVis = /** @class */ (function () {
             this.selection = cellsInside;
         }
     };
+    /**
+     * Determine if current cell particle is inside selection cube
+     * @param position Particle position
+     * @param min global minimum coordinates of selection cube
+     * @param max global maximum coordinates of selection cube
+     */
     SCVis.prototype._particleInBox = function (position, min, max) {
         // checking against bounding box is sufficient,
         // no rotation is allowed
@@ -519,48 +537,83 @@ var SCVis = /** @class */ (function () {
         }
         this._legend = advancedTexture;
     };
+    /**
+     * Display a legend for colors used in plot
+     */
     SCVis.prototype.showLegend = function () {
         if (this._clusters && this._clusterNames) {
             this._showLegend = true;
             this._createLegend;
         }
     };
+    /**
+     * Hide the legend
+     */
     SCVis.prototype.hideLegend = function () {
         if (this._legend) {
             this._legend.dispose();
         }
         this._showLegend = false;
     };
+    /**
+     * Show a cube for interactive selection of cells
+     */
     SCVis.prototype.showSelectionCube = function () {
         this._showSelectCube = true;
         this._selectionCube.visibility = 1;
         this._selectionGizmo.gizmoLayer.shouldRender = true;
     };
+    /**
+     * Hide the selection cube
+     */
     SCVis.prototype.hideSelectionCube = function () {
         this._showSelectCube = false;
         this._selectionCube.visibility = 0;
         this._selectionGizmo.gizmoLayer.shouldRender = false;
     };
+    /**
+     * Display the cell colors as a time series
+     */
     SCVis.prototype.enableTimeSeries = function () {
         this._isTimeSeries = true;
     };
+    /**
+     * Return to normal color mode
+     */
     SCVis.prototype.disableTimeSeries = function () {
         this._isTimeSeries = false;
     };
+    /**
+     * Go through time series automatically
+     */
     SCVis.prototype.playTimeSeries = function () {
         this._playingTimeSeries = true;
     };
+    /**
+     * Pause playback of the time series
+     */
     SCVis.prototype.pauseTimeSeries = function () {
         this._playingTimeSeries = false;
     };
+    /**
+     * Set speed of time series playback
+     * @param speed Delay in frames between steps of time series
+     */
     SCVis.prototype.setTimeSeriesSpeed = function (speed) {
         this._timeSeriesSpeed = speed;
     };
+    /**
+     * Color the cells at the specified time series index
+     * @param index Index of time series
+     */
     SCVis.prototype.setTimeSeriesIndex = function (index) {
         this._timeSeriesIndex = index;
         this._setAllCellsInvisible();
         this._updateTimeSeriesCells();
     };
+    /**
+     * Record an animated gif of the cell embedding
+     */
     SCVis.prototype.startRecording = function () {
         this._record = true;
     };

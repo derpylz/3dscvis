@@ -38,7 +38,7 @@ class SCVis {
 
     turntable: boolean = false;
 
-    selection: number[];
+    selection: number[]; // contains indices of cells in selection cube
 
     /**
      * Initialize the 3d visualization
@@ -119,6 +119,9 @@ class SCVis {
         }
     }
 
+    /**
+     * Recording a gif after rendering
+     */
     private _afterRender(): void {
         if (this._record) {
             if (this._turned == 0) {
@@ -231,6 +234,9 @@ class SCVis {
         this._SPS.setParticles();
     }
 
+    /**
+     * color cells in time series depending on the current _timeSeriesIndex
+     */
     private _updateTimeSeriesCells(): void {
         // reset timeSeriesIndex to 0 to loop
         if (this._timeSeriesIndex > Math.max.apply(Math, this._clusters)) {
@@ -289,6 +295,9 @@ class SCVis {
         this._camera.radius = viewRadius;
     }
 
+    /**
+     * Creates a cube with drag controls to select cells in 3d
+     */
     private _createSelectionCube(): void {
         // create cube mesh
         let selCube = BABYLON.MeshBuilder.CreateBox("selectionCube", {
@@ -332,6 +341,9 @@ class SCVis {
         this._selectionGizmo = gizmo;
     }
 
+    /**
+     * color cells inside cube and append their indices to the selection
+     */
     private _selectCellsInCube(): void {
         if (this._showSelectCube) {
             var boundInfo = this._selectionCube.getBoundingInfo().boundingBox;
@@ -352,6 +364,12 @@ class SCVis {
         }
     }
 
+    /**
+     * Determine if current cell particle is inside selection cube
+     * @param position Particle position
+     * @param min global minimum coordinates of selection cube
+     * @param max global maximum coordinates of selection cube
+     */
     private _particleInBox(position: BABYLON.Vector3, min: BABYLON.Vector3, max: BABYLON.Vector3): boolean {
         // checking against bounding box is sufficient,
         // no rotation is allowed
@@ -563,6 +581,9 @@ class SCVis {
         this._legend = advancedTexture;
     }
 
+    /**
+     * Display a legend for colors used in plot
+     */
     showLegend(): void {
         if (this._clusters && this._clusterNames) {
             this._showLegend = true;
@@ -570,6 +591,9 @@ class SCVis {
         }
     }
 
+    /**
+     * Hide the legend
+     */
     hideLegend(): void {
         if (this._legend) {
             this._legend.dispose();
@@ -577,44 +601,73 @@ class SCVis {
         this._showLegend = false;
     }
 
+    /**
+     * Show a cube for interactive selection of cells
+     */
     showSelectionCube(): void {
         this._showSelectCube = true;
         this._selectionCube.visibility = 1;
         this._selectionGizmo.gizmoLayer.shouldRender = true;
     }
 
+    /**
+     * Hide the selection cube
+     */
     hideSelectionCube(): void {
         this._showSelectCube = false;
         this._selectionCube.visibility = 0;
         this._selectionGizmo.gizmoLayer.shouldRender = false;
     }
 
+    /**
+     * Display the cell colors as a time series
+     */
     enableTimeSeries(): void {
         this._isTimeSeries = true;
     }
 
+    /**
+     * Return to normal color mode
+     */
     disableTimeSeries(): void {
         this._isTimeSeries = false;
     }
 
+    /**
+     * Go through time series automatically
+     */
     playTimeSeries(): void {
         this._playingTimeSeries = true;
     }
 
+    /**
+     * Pause playback of the time series
+     */
     pauseTimeSeries(): void {
         this._playingTimeSeries = false;
     }
 
+    /**
+     * Set speed of time series playback
+     * @param speed Delay in frames between steps of time series
+     */
     setTimeSeriesSpeed(speed: number) {
         this._timeSeriesSpeed = speed;
     }
 
+    /**
+     * Color the cells at the specified time series index
+     * @param index Index of time series
+     */
     setTimeSeriesIndex(index: number) {
         this._timeSeriesIndex = index;
         this._setAllCellsInvisible();
         this._updateTimeSeriesCells();
     }
 
+    /**
+     * Record an animated gif of the cell embedding
+     */
     startRecording() {
         this._record = true;
     }
