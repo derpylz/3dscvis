@@ -433,6 +433,24 @@ var SCVis = /** @class */ (function () {
             this._updateTimeSeriesCells();
         }
     };
+    SCVis.prototype.colorDirectly = function (colors) {
+        if (this._legend) {
+            this._legend.dispose();
+            this._showLegend = false;
+        }
+        if (this._isTimeSeries) {
+            this._isTimeSeries = false;
+        }
+        for (var i = 0; i < this._SPS.nbParticles; i++) {
+            var cl = colors[i];
+            cl = chroma(cl).hex();
+            if (cl.length == 7) {
+                cl += "ff";
+            }
+            this._SPS.particles[i].color = BABYLON.Color4.FromHexString(cl);
+        }
+        this._SPS.setParticles();
+    };
     /**
      * Puts values into evenly spaced bins defined by the number of bins.
      * @param vals values to place into bins
