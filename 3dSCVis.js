@@ -750,7 +750,8 @@ var SCVis = /** @class */ (function () {
         }, this._scene);
         this._hl1.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
         this._hl2.diffuse = new BABYLON.Color3(0.4, 0.4, 0.4);
-        this._ground.position.y = -15;
+        var ymin = this._SPS.mesh.getBoundingInfo().boundingBox.minimumWorld.y;
+        this._ground.position.y = ymin - 5;
         this._shadowGenerator = new BABYLON.ShadowGenerator(1024, this._pointLight);
         this._shadowGenerator.addShadowCaster(this._SPS.mesh);
         this._shadowGenerator.useBlurExponentialShadowMap = true;
@@ -762,7 +763,8 @@ var SCVis = /** @class */ (function () {
         this._pointLight = null;
         this._ground = null;
         this._shadowGenerator = null;
-        this._hl1.intensity = 1;
+        this._hl1.diffuse = new BABYLON.Color3(1, 1, 1);
+        this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
     };
     /**
      * Start rendering the scene

@@ -827,7 +827,9 @@ class SCVis {
         this._hl1.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
         this._hl2.diffuse = new BABYLON.Color3(0.4, 0.4, 0.4);
 
-        this._ground.position.y = -15;
+        let ymin = this._SPS.mesh.getBoundingInfo().boundingBox.minimumWorld.y
+
+        this._ground.position.y = ymin - 5;
 
         this._shadowGenerator = new BABYLON.ShadowGenerator(1024, this._pointLight);
         this._shadowGenerator.addShadowCaster(this._SPS.mesh);
