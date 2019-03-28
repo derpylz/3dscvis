@@ -25,6 +25,7 @@ var SCVis = /** @class */ (function () {
         this._cellPicking = false;
         this._selectionCallback = function (selection) { return false; };
         this._labels = [];
+        this._labelTexts = [];
         this._showLabels = false;
         this._labelSize = 100;
         this.turntable = false;
@@ -707,8 +708,8 @@ var SCVis = /** @class */ (function () {
     SCVis.prototype.addLabel = function (text, moveCallback) {
         var labelIdx = this._labels.length;
         var plane = BABYLON.MeshBuilder.CreatePlane('label_' + labelIdx, {
-            width: 10,
-            height: 10
+            width: 5,
+            height: 5
         }, this._scene);
         var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane);
         var textBlock = new BABYLON.GUI.TextBlock();
@@ -716,6 +717,7 @@ var SCVis = /** @class */ (function () {
         textBlock.color = "black";
         textBlock.fontSize = this._labelSize;
         advancedTexture.addControl(textBlock);
+        this._labelTexts.push(textBlock);
         var labelDragBehavior = new BABYLON.PointerDragBehavior();
         labelDragBehavior.onDragEndObservable.add(function () {
             if (moveCallback) {
@@ -732,10 +734,35 @@ var SCVis = /** @class */ (function () {
     };
     SCVis.prototype.changeLabelSize = function (size) {
         this._labelSize = size;
+        for (var i = 0; i < this._labelTexts.length; i++) {
+            this._labelTexts[i].fontSize = size;
+        }
     };
     SCVis.prototype.positionLabel = function (labelIdx, position) {
         var pos = BABYLON.Vector3.FromArray(position);
         this._labels[labelIdx].position = pos;
+    };
+    SCVis.prototype.showShadows = function () {
+        this._pointLight = new BABYLON.PointLight('pointlight', new BABYLON.Vector3(-5, 30, -5), this._scene);
+        this._ground = BABYLON.MeshBuilder.CreateGround('ground', {
+            width: 100,
+            height: 100
+        }, this._scene);
+        this._hl1.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
+        this._hl2.diffuse = new BABYLON.Color3(0.4, 0.4, 0.4);
+        this._ground.position.y = -15;
+        this._shadowGenerator = new BABYLON.ShadowGenerator(1024, this._pointLight);
+        this._shadowGenerator.addShadowCaster(this._SPS.mesh);
+        this._shadowGenerator.useBlurExponentialShadowMap = true;
+        this._shadowGenerator.useKernelBlur = true;
+        this._shadowGenerator.blurKernel = 64;
+        this._ground.receiveShadows = true;
+    };
+    SCVis.prototype.hideShadows = function () {
+        this._pointLight = null;
+        this._ground = null;
+        this._shadowGenerator = null;
+        this._hl1.intensity = 1;
     };
     /**
      * Start rendering the scene

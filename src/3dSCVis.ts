@@ -11,6 +11,8 @@ class SCVis {
     private _camera: BABYLON.ArcRotateCamera;
     private _hl1: BABYLON.HemisphericLight;
     private _hl2: BABYLON.HemisphericLight;
+    private _pointLight: BABYLON.PointLight;
+    private _ground: BABYLON.Mesh;
     private _coords: number[][];
     private _clusters: number[];
     private _clusterNames: string[];
@@ -38,8 +40,10 @@ class SCVis {
     private _cellPicking: boolean = false;
     private _selectionCallback = function (selection: number[]) { return false; };
     private _labels: BABYLON.Mesh[] = [];
+    private _labelTexts: BABYLON.GUI.TextBlock[] = [];
     private _showLabels: boolean = false;
     private _labelSize: number = 100;
+    private _shadowGenerator: BABYLON.ShadowGenerator;
 
     turntable: boolean = false;
 
@@ -148,7 +152,7 @@ class SCVis {
             let axis1 = BABYLON.Vector3.Cross(this._camera.position, BABYLON.Axis.Y);
             let axis3 = BABYLON.Vector3.Cross(axis1, this._camera.position);
             let axis2 = BABYLON.Vector3.Cross(axis1, axis3);
-            
+
             for (let i = 0; i < this._labels.length; i++) {
                 this._labels[i].rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
             }
@@ -772,8 +776,8 @@ class SCVis {
     addLabel(text: string, moveCallback?: (position: BABYLON.Vector3) => any): number {
         let labelIdx = this._labels.length;
         let plane = BABYLON.MeshBuilder.CreatePlane('label_' + labelIdx, {
-            width: 10,
-            height: 10
+            width: 5,
+            height: 5
         }, this._scene);
 
         let advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane);
@@ -782,6 +786,8 @@ class SCVis {
         textBlock.color = "black";
         textBlock.fontSize = this._labelSize;
         advancedTexture.addControl(textBlock);
+
+        this._labelTexts.push(textBlock);
 
         let labelDragBehavior = new BABYLON.PointerDragBehavior();
         labelDragBehavior.onDragEndObservable.add(() => {
@@ -801,11 +807,44 @@ class SCVis {
 
     changeLabelSize(size: number) {
         this._labelSize = size;
+        for (let i = 0; i < this._labelTexts.length; i++) {
+            this._labelTexts[i].fontSize = size;
+        }
     }
 
     positionLabel(labelIdx: number, position: number[]): void {
         let pos = BABYLON.Vector3.FromArray(position);
         this._labels[labelIdx].position = pos;
+    }
+
+    showShadows(): void {
+        this._pointLight = new BABYLON.PointLight('pointlight', new BABYLON.Vector3(-5, 30, -5), this._scene);
+        this._ground = BABYLON.MeshBuilder.CreateGround('ground', {
+            width: 100,
+            height: 100
+        }, this._scene);
+
+        this._hl1.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
+        this._hl2.diffuse = new BABYLON.Color3(0.4, 0.4, 0.4);
+
+        this._ground.position.y = -15;
+
+        this._shadowGenerator = new BABYLON.ShadowGenerator(1024, this._pointLight);
+        this._shadowGenerator.addShadowCaster(this._SPS.mesh);
+        this._shadowGenerator.useBlurExponentialShadowMap = true;
+        this._shadowGenerator.useKernelBlur = true;
+        this._shadowGenerator.blurKernel = 64;
+
+
+        this._ground.receiveShadows = true;
+    }
+
+    hideShadows(): void {
+        this._pointLight = null;
+        this._ground = null;
+        this._shadowGenerator = null;
+        this._hl1.diffuse = new BABYLON.Color3(1, 1, 1);
+        this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
     }
 
     /**
