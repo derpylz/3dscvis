@@ -24,6 +24,9 @@ var SCVis = /** @class */ (function () {
         this._turned = 0;
         this._cellPicking = false;
         this._selectionCallback = function (selection) { return false; };
+        this._labels = [];
+        this._showLabels = false;
+        this._labelSize = 100;
         this.turntable = false;
         this._coords = coords;
         this._canvas = document.getElementById(canvasElement);
@@ -107,6 +110,14 @@ var SCVis = /** @class */ (function () {
         else {
             this._playingTimeSeries = false;
             this._setTimeSeries = false;
+        }
+        if (this._showLabels) {
+            var axis1 = BABYLON.Vector3.Cross(this._camera.position, BABYLON.Axis.Y);
+            var axis3 = BABYLON.Vector3.Cross(axis1, this._camera.position);
+            var axis2 = BABYLON.Vector3.Cross(axis1, axis3);
+            for (var i = 0; i < this._labels.length; i++) {
+                this._labels[i].rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
+            }
         }
     };
     /**
@@ -692,6 +703,39 @@ var SCVis = /** @class */ (function () {
     SCVis.prototype.changeCellSize = function (size) {
         this._size = size;
         this._updateCellSize();
+    };
+    SCVis.prototype.addLabel = function (text, moveCallback) {
+        var labelIdx = this._labels.length;
+        var plane = BABYLON.MeshBuilder.CreatePlane('label_' + labelIdx, {
+            width: 10,
+            height: 10
+        }, this._scene);
+        var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane);
+        var textBlock = new BABYLON.GUI.TextBlock();
+        textBlock.text = text;
+        textBlock.color = "black";
+        textBlock.fontSize = this._labelSize;
+        advancedTexture.addControl(textBlock);
+        var labelDragBehavior = new BABYLON.PointerDragBehavior();
+        labelDragBehavior.onDragEndObservable.add(function () {
+            if (moveCallback) {
+                moveCallback(plane.position);
+            }
+            else {
+                console.log([plane.position.x, plane.position.y, plane.position.z]);
+            }
+        });
+        plane.addBehavior(labelDragBehavior);
+        this._labels.push(plane);
+        this._showLabels = true;
+        return labelIdx;
+    };
+    SCVis.prototype.changeLabelSize = function (size) {
+        this._labelSize = size;
+    };
+    SCVis.prototype.positionLabel = function (labelIdx, position) {
+        var pos = BABYLON.Vector3.FromArray(position);
+        this._labels[labelIdx].position = pos;
     };
     /**
      * Start rendering the scene

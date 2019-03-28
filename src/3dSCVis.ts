@@ -37,6 +37,9 @@ class SCVis {
     private _turned: number = 0;
     private _cellPicking: boolean = false;
     private _selectionCallback = function (selection: number[]) { return false; };
+    private _labels: BABYLON.Mesh[] = [];
+    private _showLabels: boolean = false;
+    private _labelSize: number = 100;
 
     turntable: boolean = false;
 
@@ -140,6 +143,15 @@ class SCVis {
         } else {
             this._playingTimeSeries = false;
             this._setTimeSeries = false;
+        }
+        if (this._showLabels) {
+            let axis1 = BABYLON.Vector3.Cross(this._camera.position, BABYLON.Axis.Y);
+            let axis3 = BABYLON.Vector3.Cross(axis1, this._camera.position);
+            let axis2 = BABYLON.Vector3.Cross(axis1, axis3);
+            
+            for (let i = 0; i < this._labels.length; i++) {
+                this._labels[i].rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
+            }
         }
     }
 
@@ -755,6 +767,45 @@ class SCVis {
     changeCellSize(size: number): void {
         this._size = size;
         this._updateCellSize();
+    }
+
+    addLabel(text: string, moveCallback?: (position: BABYLON.Vector3) => any): number {
+        let labelIdx = this._labels.length;
+        let plane = BABYLON.MeshBuilder.CreatePlane('label_' + labelIdx, {
+            width: 10,
+            height: 10
+        }, this._scene);
+
+        let advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane);
+        let textBlock = new BABYLON.GUI.TextBlock();
+        textBlock.text = text;
+        textBlock.color = "black";
+        textBlock.fontSize = this._labelSize;
+        advancedTexture.addControl(textBlock);
+
+        let labelDragBehavior = new BABYLON.PointerDragBehavior();
+        labelDragBehavior.onDragEndObservable.add(() => {
+            if (moveCallback) {
+                moveCallback(plane.position);
+            } else {
+                console.log([plane.position.x, plane.position.y, plane.position.z])
+            }
+        });
+        plane.addBehavior(labelDragBehavior);
+
+        this._labels.push(plane);
+
+        this._showLabels = true;
+        return labelIdx;
+    }
+
+    changeLabelSize(size: number) {
+        this._labelSize = size;
+    }
+
+    positionLabel(labelIdx: number, position: number[]): void {
+        let pos = BABYLON.Vector3.FromArray(position);
+        this._labels[labelIdx].position = pos;
     }
 
     /**
