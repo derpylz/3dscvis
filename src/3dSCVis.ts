@@ -40,10 +40,13 @@ class SCVis {
     private _cellPicking: boolean = false;
     private _selectionCallback = function (selection: number[]) { return false; };
     private _labels: BABYLON.Mesh[] = [];
+    private _labelBackgrounds: BABYLON.GUI.Rectangle[] = [];
     private _labelTexts: BABYLON.GUI.TextBlock[] = [];
     private _showLabels: boolean = false;
     private _labelSize: number = 100;
     private _shadowGenerator: BABYLON.ShadowGenerator;
+    private _mouseOverCheck: boolean = false;
+    private _mouseOverCallback = function (selection: number) { return false; };
 
     turntable: boolean = false;
 
@@ -155,6 +158,31 @@ class SCVis {
 
             for (let i = 0; i < this._labels.length; i++) {
                 this._labels[i].rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
+            }
+        }
+        if (this._mouseOverCheck) {
+            const pickResult = this._scene.pick(this._scene.pointerX, this._scene.pointerY);
+            const faceId = pickResult.faceId;
+            if (faceId == -1) {
+                return;
+            }
+            const idx = this._SPS.pickedParticles[faceId].idx;
+            this._mouseOverCallback(idx);
+        }
+        if (this._showLabels) {
+            const meshUnderPointer = this._scene.meshUnderPointer as BABYLON.Mesh;
+            const labelIdx = this._labels.indexOf(meshUnderPointer)
+            if (labelIdx != -1) {
+                for (let i = 0; i < this._labelBackgrounds.length; i++) {
+                    if (i != labelIdx) {
+                        this._labelBackgrounds[i].alpha = 0;
+                    }
+                }
+                this._labelBackgrounds[labelIdx].alpha = 1;
+            } else {
+                for (let i = 0; i < this._labelBackgrounds.length; i++) {
+                    this._labelBackgrounds[i].alpha = 0;
+                }
             }
         }
     }
@@ -765,6 +793,24 @@ class SCVis {
     }
 
     /**
+     * Enable mouse over selection of cells
+     * @param selectionCallback Function that receives selection
+     */
+    enableMouseOver(selectionCallback?: (selection: number) => any): void {
+        this._mouseOverCheck = true;
+        if (selectionCallback) {
+            this._mouseOverCallback = selectionCallback;
+        }
+    }
+
+    /**
+     * disable mouse pointer selection
+     */
+    disableMouseOver(): void {
+        this._mouseOverCheck = false;
+    }
+
+    /**
      * Change size of cells
      * @param size Cell size, default = 1
      */
@@ -780,13 +826,22 @@ class SCVis {
             height: 5
         }, this._scene);
 
+        let ymax = this._SPS.mesh.getBoundingInfo().boundingBox.maximumWorld.y;
+        plane.position.y = ymax + 2;
+
         let advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane);
+
+        let background = new BABYLON.GUI.Rectangle();
+        background.color = "red";
+        background.alpha = 0
+        advancedTexture.addControl(background);
+        this._labelBackgrounds.push(background);
+
         let textBlock = new BABYLON.GUI.TextBlock();
         textBlock.text = text;
         textBlock.color = "black";
         textBlock.fontSize = this._labelSize;
         advancedTexture.addControl(textBlock);
-
         this._labelTexts.push(textBlock);
 
         let labelDragBehavior = new BABYLON.PointerDragBehavior();

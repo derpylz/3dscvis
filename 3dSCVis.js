@@ -25,9 +25,12 @@ var SCVis = /** @class */ (function () {
         this._cellPicking = false;
         this._selectionCallback = function (selection) { return false; };
         this._labels = [];
+        this._labelBackgrounds = [];
         this._labelTexts = [];
         this._showLabels = false;
         this._labelSize = 100;
+        this._mouseOverCheck = false;
+        this._mouseOverCallback = function (selection) { return false; };
         this.turntable = false;
         this._coords = coords;
         this._canvas = document.getElementById(canvasElement);
@@ -118,6 +121,32 @@ var SCVis = /** @class */ (function () {
             var axis2 = BABYLON.Vector3.Cross(axis1, axis3);
             for (var i = 0; i < this._labels.length; i++) {
                 this._labels[i].rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
+            }
+        }
+        if (this._mouseOverCheck) {
+            var pickResult = this._scene.pick(this._scene.pointerX, this._scene.pointerY);
+            var faceId = pickResult.faceId;
+            if (faceId == -1) {
+                return;
+            }
+            var idx = this._SPS.pickedParticles[faceId].idx;
+            this._mouseOverCallback(idx);
+        }
+        if (this._showLabels) {
+            var meshUnderPointer = this._scene.meshUnderPointer;
+            var labelIdx = this._labels.indexOf(meshUnderPointer);
+            if (labelIdx != -1) {
+                for (var i = 0; i < this._labelBackgrounds.length; i++) {
+                    if (i != labelIdx) {
+                        this._labelBackgrounds[i].alpha = 0;
+                    }
+                }
+                this._labelBackgrounds[labelIdx].alpha = 1;
+            }
+            else {
+                for (var i = 0; i < this._labelBackgrounds.length; i++) {
+                    this._labelBackgrounds[i].alpha = 0;
+                }
             }
         }
     };
@@ -698,6 +727,22 @@ var SCVis = /** @class */ (function () {
         this._cellPicking = false;
     };
     /**
+     * Enable mouse over selection of cells
+     * @param selectionCallback Function that receives selection
+     */
+    SCVis.prototype.enableMouseOver = function (selectionCallback) {
+        this._mouseOverCheck = true;
+        if (selectionCallback) {
+            this._mouseOverCallback = selectionCallback;
+        }
+    };
+    /**
+     * disable mouse pointer selection
+     */
+    SCVis.prototype.disableMouseOver = function () {
+        this._mouseOverCheck = false;
+    };
+    /**
      * Change size of cells
      * @param size Cell size, default = 1
      */
@@ -711,7 +756,14 @@ var SCVis = /** @class */ (function () {
             width: 5,
             height: 5
         }, this._scene);
+        var ymax = this._SPS.mesh.getBoundingInfo().boundingBox.maximumWorld.y;
+        plane.position.y = ymax + 2;
         var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane);
+        var background = new BABYLON.GUI.Rectangle();
+        background.color = "red";
+        background.alpha = 0;
+        advancedTexture.addControl(background);
+        this._labelBackgrounds.push(background);
         var textBlock = new BABYLON.GUI.TextBlock();
         textBlock.text = text;
         textBlock.color = "black";
