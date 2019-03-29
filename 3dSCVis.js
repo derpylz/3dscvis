@@ -812,9 +812,9 @@ var SCVis = /** @class */ (function () {
         this._ground.receiveShadows = true;
     };
     SCVis.prototype.hideShadows = function () {
-        this._pointLight = null;
-        this._ground = null;
-        this._shadowGenerator = null;
+        this._pointLight.dispose();
+        this._ground.dispose();
+        this._shadowGenerator.dispose();
         this._hl1.diffuse = new BABYLON.Color3(1, 1, 1);
         this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
     };
