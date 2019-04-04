@@ -44,9 +44,11 @@ class SCVis {
     private _labelTexts: BABYLON.GUI.TextBlock[] = [];
     private _showLabels: boolean = false;
     private _labelSize: number = 100;
+    private _showShadows: boolean = false;
     private _shadowGenerator: BABYLON.ShadowGenerator;
     private _mouseOverCheck: boolean = false;
     private _mouseOverCallback = function (selection: number) { return false; };
+    private _isAnaglyph: boolean = false;
 
     turntable: boolean = false;
 
@@ -56,11 +58,59 @@ class SCVis {
      * Initialize the 3d visualization
      * @param canvasElement ID of the canvas element in the dom
      * @param coords Array of arrays containing the 3d coordinates of the cells
+     * @param parameters Initialize with optional parameters.
      */
-    constructor(canvasElement: string, coords: number[][]) {
+    constructor(
+        canvasElement: string,
+        coords: number[][],
+        parameters?: {
+            turntable: boolean;
+            selectionCube: boolean;
+            size: number;
+            isTimeSeries: boolean;
+            playingTimeSeries: boolean;
+            timeSeriesIndex: number;
+            timeSeriesSpeed: number;
+            labelSize: number;
+            showShadows: boolean;
+            isAnaglyph: boolean;
+        }) {
         this._coords = coords;
         this._canvas = document.getElementById(canvasElement) as HTMLCanvasElement;
         this._engine = new BABYLON.Engine(this._canvas, true);
+        // initialize with optional parameters
+        if (parameters) {
+            if (parameters.turntable) {
+                this.turntable = parameters.turntable;
+            }
+            if (parameters.selectionCube) {
+                this._showSelectCube = parameters.selectionCube;
+            }
+            if (parameters.size) {
+                this._size = parameters.size;
+            }
+            if (parameters.isTimeSeries) {
+                this._isTimeSeries = parameters.isTimeSeries;
+            }
+            if (parameters.playingTimeSeries) {
+                this._playingTimeSeries = parameters.playingTimeSeries;
+            }
+            if (parameters.timeSeriesIndex) {
+                this._timeSeriesIndex = parameters.timeSeriesIndex;
+            }
+            if (parameters.timeSeriesSpeed) {
+                this._timeSeriesSpeed = parameters.timeSeriesSpeed;
+            }
+            if (parameters.labelSize) {
+                this._labelSize = parameters.labelSize;
+            }
+            if (parameters.showShadows) {
+                this._showShadows = parameters.showShadows;
+            }
+            if (parameters.isAnaglyph) {
+                this._isAnaglyph = parameters.isAnaglyph;
+            }
+        }
     }
 
     /**
@@ -92,6 +142,14 @@ class SCVis {
         this._cameraFitCells();
 
         this._createSelectionCube();
+
+        if (this.showShadows) {
+            this._setupShadows();
+        }
+
+        if (this._isAnaglyph) {
+            this._setupAnaglyph();
+        }
 
         this._scene.registerBeforeRender(this._prepRender.bind(this));
 
@@ -872,7 +930,7 @@ class SCVis {
         this._labels[labelIdx].position = pos;
     }
 
-    showShadows(): void {
+    _setupShadows(): void {
         this._pointLight = new BABYLON.PointLight('pointlight', new BABYLON.Vector3(-5, 30, -5), this._scene);
         this._ground = BABYLON.MeshBuilder.CreateGround('ground', {
             width: 100,
@@ -896,12 +954,50 @@ class SCVis {
         this._ground.receiveShadows = true;
     }
 
+    showShadows(): void {
+        if (!this._showShadows) {
+            this._setupShadows();
+        }
+        this._showShadows = true;
+    }
+
     hideShadows(): void {
-        this._pointLight.dispose();
-        this._ground.dispose();
-        this._shadowGenerator.dispose();
-        this._hl1.diffuse = new BABYLON.Color3(1, 1, 1);
-        this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
+        if (this._showShadows) {
+            this._pointLight.dispose();
+            this._ground.dispose();
+            this._shadowGenerator.dispose();
+            this._hl1.diffuse = new BABYLON.Color3(1, 1, 1);
+            this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
+        }
+        this._showShadows = false;
+    }
+
+    makeAnaglyph(): void {
+        if (!this._isAnaglyph) {
+            this._setupAnaglyph();
+        }
+        this._isAnaglyph = true;
+    }
+
+    private _setupAnaglyph() {
+        this._camera.dispose();
+        this._camera = new BABYLON.AnaglyphArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), 0.033, this._scene);
+        this._camera.attachControl(this._canvas, true);
+        this._camera.wheelPrecision = 50;
+        this._cameraFitCells();
+        this._scene.activeCamera = this._camera;
+    }
+
+    removeAnaglyph(): void {
+        if (this._isAnaglyph) {
+            this._camera.dispose();
+            this._camera = new BABYLON.ArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), this._scene);
+            this._camera.attachControl(this._canvas, true);
+            this._camera.wheelPrecision = 50;
+            this._cameraFitCells();
+            this._scene.activeCamera = this._camera;
+        }
+        this._isAnaglyph = false;
     }
 
     /**

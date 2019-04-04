@@ -7,8 +7,9 @@ var SCVis = /** @class */ (function () {
      * Initialize the 3d visualization
      * @param canvasElement ID of the canvas element in the dom
      * @param coords Array of arrays containing the 3d coordinates of the cells
+     * @param parameters Initialize with optional parameters.
      */
-    function SCVis(canvasElement, coords) {
+    function SCVis(canvasElement, coords, parameters) {
         this._showLegend = true;
         this._size = 1;
         this._rotationRate = 0.01;
@@ -29,12 +30,47 @@ var SCVis = /** @class */ (function () {
         this._labelTexts = [];
         this._showLabels = false;
         this._labelSize = 100;
+        this._showShadows = false;
         this._mouseOverCheck = false;
         this._mouseOverCallback = function (selection) { return false; };
+        this._isAnaglyph = false;
         this.turntable = false;
         this._coords = coords;
         this._canvas = document.getElementById(canvasElement);
         this._engine = new BABYLON.Engine(this._canvas, true);
+        // initialize with optional parameters
+        if (parameters) {
+            if (parameters.turntable) {
+                this.turntable = parameters.turntable;
+            }
+            if (parameters.selectionCube) {
+                this._showSelectCube = parameters.selectionCube;
+            }
+            if (parameters.size) {
+                this._size = parameters.size;
+            }
+            if (parameters.isTimeSeries) {
+                this._isTimeSeries = parameters.isTimeSeries;
+            }
+            if (parameters.playingTimeSeries) {
+                this._playingTimeSeries = parameters.playingTimeSeries;
+            }
+            if (parameters.timeSeriesIndex) {
+                this._timeSeriesIndex = parameters.timeSeriesIndex;
+            }
+            if (parameters.timeSeriesSpeed) {
+                this._timeSeriesSpeed = parameters.timeSeriesSpeed;
+            }
+            if (parameters.labelSize) {
+                this._labelSize = parameters.labelSize;
+            }
+            if (parameters.showShadows) {
+                this._showShadows = parameters.showShadows;
+            }
+            if (parameters.isAnaglyph) {
+                this._isAnaglyph = parameters.isAnaglyph;
+            }
+        }
     }
     /**
      * Create the scene with camera, lights and the solid particle system
@@ -59,6 +95,12 @@ var SCVis = /** @class */ (function () {
         this._createCellParticles();
         this._cameraFitCells();
         this._createSelectionCube();
+        if (this.showShadows) {
+            this._setupShadows();
+        }
+        if (this._isAnaglyph) {
+            this._setupAnaglyph();
+        }
         this._scene.registerBeforeRender(this._prepRender.bind(this));
         this._scene.registerAfterRender(this._afterRender.bind(this));
         this._scene.onPointerDown = this._cellPicker.bind(this);
@@ -794,7 +836,7 @@ var SCVis = /** @class */ (function () {
         var pos = BABYLON.Vector3.FromArray(position);
         this._labels[labelIdx].position = pos;
     };
-    SCVis.prototype.showShadows = function () {
+    SCVis.prototype._setupShadows = function () {
         this._pointLight = new BABYLON.PointLight('pointlight', new BABYLON.Vector3(-5, 30, -5), this._scene);
         this._ground = BABYLON.MeshBuilder.CreateGround('ground', {
             width: 100,
@@ -811,12 +853,46 @@ var SCVis = /** @class */ (function () {
         this._shadowGenerator.blurKernel = 64;
         this._ground.receiveShadows = true;
     };
+    SCVis.prototype.showShadows = function () {
+        if (!this._showShadows) {
+            this._setupShadows();
+        }
+        this._showShadows = true;
+    };
     SCVis.prototype.hideShadows = function () {
-        this._pointLight.dispose();
-        this._ground.dispose();
-        this._shadowGenerator.dispose();
-        this._hl1.diffuse = new BABYLON.Color3(1, 1, 1);
-        this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
+        if (this._showShadows) {
+            this._pointLight.dispose();
+            this._ground.dispose();
+            this._shadowGenerator.dispose();
+            this._hl1.diffuse = new BABYLON.Color3(1, 1, 1);
+            this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
+        }
+        this._showShadows = false;
+    };
+    SCVis.prototype.makeAnaglyph = function () {
+        if (!this._isAnaglyph) {
+            this._setupAnaglyph();
+        }
+        this._isAnaglyph = true;
+    };
+    SCVis.prototype._setupAnaglyph = function () {
+        this._camera.dispose();
+        this._camera = new BABYLON.AnaglyphArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), 0.033, this._scene);
+        this._camera.attachControl(this._canvas, true);
+        this._camera.wheelPrecision = 50;
+        this._cameraFitCells();
+        this._scene.activeCamera = this._camera;
+    };
+    SCVis.prototype.removeAnaglyph = function () {
+        if (this._isAnaglyph) {
+            this._camera.dispose();
+            this._camera = new BABYLON.ArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), this._scene);
+            this._camera.attachControl(this._canvas, true);
+            this._camera.wheelPrecision = 50;
+            this._cameraFitCells();
+            this._scene.activeCamera = this._camera;
+        }
+        this._isAnaglyph = false;
     };
     /**
      * Start rendering the scene
