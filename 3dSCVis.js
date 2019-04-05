@@ -95,7 +95,7 @@ var SCVis = /** @class */ (function () {
         this._createCellParticles();
         this._cameraFitCells();
         this._createSelectionCube();
-        if (this.showShadows) {
+        if (this._showShadows) {
             this._setupShadows();
         }
         if (this._isAnaglyph) {

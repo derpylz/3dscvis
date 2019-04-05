@@ -143,7 +143,7 @@ class SCVis {
 
         this._createSelectionCube();
 
-        if (this.showShadows) {
+        if (this._showShadows) {
             this._setupShadows();
         }
 
