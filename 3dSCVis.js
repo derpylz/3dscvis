@@ -516,6 +516,10 @@ var SCVis = /** @class */ (function () {
             this._updateTimeSeriesCells();
         }
     };
+    /**
+     * Directly pass colors for the visualization
+     * @param colors array of colors for cells, either in "rgb(255,255,255)" or "#ffffff" format
+     */
     SCVis.prototype.colorDirectly = function (colors) {
         if (this._legend) {
             this._legend.dispose();
@@ -792,6 +796,11 @@ var SCVis = /** @class */ (function () {
         this._size = size;
         this._updateCellSize();
     };
+    /**
+     * Add a 3d label to the plot
+     * @param text Label title
+     * @param [moveCallback] On dragging of label in 3d plot, the final position will be passed to this function
+     */
     SCVis.prototype.addLabel = function (text, moveCallback) {
         var labelIdx = this._labels.length;
         var plane = BABYLON.MeshBuilder.CreatePlane('label_' + labelIdx, {
@@ -826,16 +835,28 @@ var SCVis = /** @class */ (function () {
         this._showLabels = true;
         return labelIdx;
     };
+    /**
+     * Change font size of all 3d labels in plot
+     * @param size Font size of all labels. Default: 100
+     */
     SCVis.prototype.changeLabelSize = function (size) {
         this._labelSize = size;
         for (var i = 0; i < this._labelTexts.length; i++) {
             this._labelTexts[i].fontSize = size;
         }
     };
+    /**
+     * Move Label to a new position
+     * @param labelIdx Index of label
+     * @param position New position of label in 3d space; array of x, y, z positions
+     */
     SCVis.prototype.positionLabel = function (labelIdx, position) {
         var pos = BABYLON.Vector3.FromArray(position);
         this._labels[labelIdx].position = pos;
     };
+    /**
+     * Adds a point-light, a ground and enables shadow casting
+     */
     SCVis.prototype._setupShadows = function () {
         this._pointLight = new BABYLON.PointLight('pointlight', new BABYLON.Vector3(-5, 30, -5), this._scene);
         this._ground = BABYLON.MeshBuilder.CreateGround('ground', {
@@ -853,12 +874,18 @@ var SCVis = /** @class */ (function () {
         this._shadowGenerator.blurKernel = 64;
         this._ground.receiveShadows = true;
     };
+    /**
+     * Enable shadow casting of cells
+     */
     SCVis.prototype.showShadows = function () {
         if (!this._showShadows) {
             this._setupShadows();
         }
         this._showShadows = true;
     };
+    /**
+     * Disable shadow casting of cells
+     */
     SCVis.prototype.hideShadows = function () {
         if (this._showShadows) {
             this._pointLight.dispose();
@@ -869,12 +896,18 @@ var SCVis = /** @class */ (function () {
         }
         this._showShadows = false;
     };
+    /**
+     * Enable anaglyph (red, cyan) representation
+     */
     SCVis.prototype.makeAnaglyph = function () {
         if (!this._isAnaglyph) {
             this._setupAnaglyph();
         }
         this._isAnaglyph = true;
     };
+    /**
+     * Creates new anaglyph camera and sets it as active
+     */
     SCVis.prototype._setupAnaglyph = function () {
         this._camera.dispose();
         this._camera = new BABYLON.AnaglyphArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), 0.033, this._scene);
@@ -883,6 +916,9 @@ var SCVis = /** @class */ (function () {
         this._cameraFitCells();
         this._scene.activeCamera = this._camera;
     };
+    /**
+     * Disable anaglyph representation
+     */
     SCVis.prototype.removeAnaglyph = function () {
         if (this._isAnaglyph) {
             this._camera.dispose();

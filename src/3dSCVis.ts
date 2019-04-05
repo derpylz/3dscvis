@@ -579,6 +579,10 @@ class SCVis {
         }
     }
 
+    /**
+     * Directly pass colors for the visualization
+     * @param colors array of colors for cells, either in "rgb(255,255,255)" or "#ffffff" format
+     */
     colorDirectly(colors: string[]): void {
         if (this._legend) {
             this._legend.dispose();
@@ -877,6 +881,11 @@ class SCVis {
         this._updateCellSize();
     }
 
+    /**
+     * Add a 3d label to the plot
+     * @param text Label title
+     * @param [moveCallback] On dragging of label in 3d plot, the final position will be passed to this function
+     */
     addLabel(text: string, moveCallback?: (position: BABYLON.Vector3) => any): number {
         let labelIdx = this._labels.length;
         let plane = BABYLON.MeshBuilder.CreatePlane('label_' + labelIdx, {
@@ -918,6 +927,10 @@ class SCVis {
         return labelIdx;
     }
 
+    /**
+     * Change font size of all 3d labels in plot
+     * @param size Font size of all labels. Default: 100
+     */
     changeLabelSize(size: number) {
         this._labelSize = size;
         for (let i = 0; i < this._labelTexts.length; i++) {
@@ -925,12 +938,20 @@ class SCVis {
         }
     }
 
+    /**
+     * Move Label to a new position
+     * @param labelIdx Index of label
+     * @param position New position of label in 3d space; array of x, y, z positions
+     */
     positionLabel(labelIdx: number, position: number[]): void {
         let pos = BABYLON.Vector3.FromArray(position);
         this._labels[labelIdx].position = pos;
     }
 
-    _setupShadows(): void {
+    /**
+     * Adds a point-light, a ground and enables shadow casting
+     */
+    private _setupShadows(): void {
         this._pointLight = new BABYLON.PointLight('pointlight', new BABYLON.Vector3(-5, 30, -5), this._scene);
         this._ground = BABYLON.MeshBuilder.CreateGround('ground', {
             width: 100,
@@ -954,6 +975,9 @@ class SCVis {
         this._ground.receiveShadows = true;
     }
 
+    /**
+     * Enable shadow casting of cells
+     */
     showShadows(): void {
         if (!this._showShadows) {
             this._setupShadows();
@@ -961,6 +985,9 @@ class SCVis {
         this._showShadows = true;
     }
 
+    /**
+     * Disable shadow casting of cells
+     */
     hideShadows(): void {
         if (this._showShadows) {
             this._pointLight.dispose();
@@ -972,6 +999,9 @@ class SCVis {
         this._showShadows = false;
     }
 
+    /**
+     * Enable anaglyph (red, cyan) representation
+     */
     makeAnaglyph(): void {
         if (!this._isAnaglyph) {
             this._setupAnaglyph();
@@ -979,6 +1009,9 @@ class SCVis {
         this._isAnaglyph = true;
     }
 
+    /**
+     * Creates new anaglyph camera and sets it as active
+     */
     private _setupAnaglyph() {
         this._camera.dispose();
         this._camera = new BABYLON.AnaglyphArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), 0.033, this._scene);
@@ -988,6 +1021,9 @@ class SCVis {
         this._scene.activeCamera = this._camera;
     }
 
+    /**
+     * Disable anaglyph representation
+     */
     removeAnaglyph(): void {
         if (this._isAnaglyph) {
             this._camera.dispose();
