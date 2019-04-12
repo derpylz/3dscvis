@@ -116,7 +116,7 @@ class SCVis {
     /**
      * Create the scene with camera, lights and the solid particle system
      */
-    createScene(): void {
+    createScene(): SCVis {
         this._scene = new BABYLON.Scene(this._engine);
 
         // camera
@@ -156,6 +156,8 @@ class SCVis {
         this._scene.registerAfterRender(this._afterRender.bind(this));
 
         this._scene.onPointerDown = this._cellPicker.bind(this);
+        
+        return this;
     }
 
     private _cellPicker(_evt: PointerEvent, pickResult: BABYLON.PickingInfo) {
@@ -527,7 +529,7 @@ class SCVis {
      * @param clusters Array of same length as cells with indices for clusters
      * @param [clusterNames] Array with sorted cluster names
      */
-    colorByClusters(clusters: number[], clusterNames?: string[]): void {
+    colorByClusters(clusters: number[], clusterNames?: string[]): SCVis {
         this._clusters = clusters;
         let uniqueClusters = clusters.filter((v, i, a) => a.indexOf(v) === i)
         let nColors = uniqueClusters.length;
@@ -553,15 +555,16 @@ class SCVis {
         if (this._isTimeSeries) {
             this._updateTimeSeriesCells();
         }
+        return this;
     }
 
     /**
      * Color cells by continuous values
      * @param values Array of same length as cells
      */
-    colorByValue(values: number[]): void {
-        this._colors = chroma.scale(chroma.brewer.Viridis).mode('lch').colors(100);
-        for (let i = 0; i < 100; i++) {
+    colorByValue(values: number[]): SCVis {
+        this._colors = chroma.scale(chroma.brewer.Viridis).mode('lch').colors(256);
+        for (let i = 0; i < 256; i++) {
             this._colors[i] += "ff";
         }
         this._clusters = this._evenBins(values);
@@ -577,13 +580,14 @@ class SCVis {
         if (this._isTimeSeries) {
             this._updateTimeSeriesCells();
         }
+        return this;
     }
 
     /**
      * Directly pass colors for the visualization
      * @param colors array of colors for cells, either in "rgb(255,255,255)" or "#ffffff" format
      */
-    colorDirectly(colors: string[]): void {
+    colorDirectly(colors: string[]): SCVis {
         if (this._legend) {
             this._legend.dispose();
             this._showLegend = false;
@@ -600,6 +604,7 @@ class SCVis {
             this._SPS.particles[i].color = BABYLON.Color4.FromHexString(cl);
         }
         this._SPS.setParticles();
+        return this;
     }
 
     /**
@@ -607,7 +612,7 @@ class SCVis {
      * @param vals values to place into bins
      * @param binCount number of bins to create
      */
-    private _evenBins(vals: number[], binCount: number = 100): number[] {
+    private _evenBins(vals: number[], binCount: number = 256): number[] {
         let N = vals.length;
         let binSize = Math.floor(N / binCount);
         let binSizeArr = Array(binCount).fill(binSize);
@@ -744,141 +749,157 @@ class SCVis {
     /**
      * Display a legend for colors used in plot
      */
-    showLegend(): void {
+    showLegend(): SCVis {
         if (this._clusters && this._clusterNames) {
             this._showLegend = true;
             this._createLegend;
         }
+        return this;
     }
 
     /**
      * Hide the legend
      */
-    hideLegend(): void {
+    hideLegend(): SCVis {
         if (this._legend) {
             this._legend.dispose();
         }
         this._showLegend = false;
+        return this;
     }
 
     /**
      * Show a cube for interactive selection of cells
      * @param [selectionCallback] Function that receives selection
      */
-    showSelectionCube(selectionCallback?: (selection: number[]) => any): void {
+    showSelectionCube(selectionCallback?: (selection: number[]) => any): SCVis {
         this._showSelectCube = true;
         this._selectionCube.visibility = 1;
         this._selectionGizmo.gizmoLayer.shouldRender = true;
         if (selectionCallback) {
             this._selectionCallback = selectionCallback;
         }
+        return this;
     }
 
     /**
      * Hide the selection cube
      */
-    hideSelectionCube(): void {
+    hideSelectionCube(): SCVis {
         this._showSelectCube = false;
         this._selectionCube.visibility = 0;
         this._selectionGizmo.gizmoLayer.shouldRender = false;
+        return this;
     }
 
     /**
      * Display the cell colors as a time series
      */
-    enableTimeSeries(): void {
+    enableTimeSeries(): SCVis {
         this._isTimeSeries = true;
+        return this;
     }
 
     /**
      * Return to normal color mode
      */
-    disableTimeSeries(): void {
+    disableTimeSeries(): SCVis {
         this._isTimeSeries = false;
+        return this;
     }
 
     /**
      * Go through time series automatically
      */
-    playTimeSeries(): void {
+    playTimeSeries(): SCVis {
         this._playingTimeSeries = true;
+        return this;
     }
 
     /**
      * Pause playback of the time series
      */
-    pauseTimeSeries(): void {
+    pauseTimeSeries(): SCVis {
         this._playingTimeSeries = false;
+        return this;
     }
 
     /**
      * Set speed of time series playback
      * @param speed Delay in frames between steps of time series
      */
-    setTimeSeriesSpeed(speed: number): void {
+    setTimeSeriesSpeed(speed: number): SCVis {
         this._timeSeriesSpeed = speed;
+        return this;
     }
 
     /**
      * Color the cells at the specified time series index
      * @param index Index of time series
      */
-    setTimeSeriesIndex(index: number): void {
+    setTimeSeriesIndex(index: number): SCVis {
         this._timeSeriesIndex = index;
         this._setAllCellsInvisible();
         this._updateTimeSeriesCells();
+        return this;
     }
 
     /**
      * Record an animated gif of the cell embedding
      */
-    startRecording(): void {
+    startRecording(): SCVis {
         this._record = true;
+        return this;
     }
 
     /**
      * Enable mouse pointer selection of cells
      * @param selectionCallback Function that receives selection
      */
-    enablePicking(selectionCallback?: (selection: number[]) => any): void {
+    enablePicking(selectionCallback?: (selection: number[]) => any): SCVis {
         this._cellPicking = true;
         if (selectionCallback) {
             this._selectionCallback = selectionCallback;
         }
+        return this;
     }
 
     /**
      * disable mouse pointer selection
      */
-    disablePicking(): void {
+    disablePicking(): SCVis {
         this._cellPicking = false;
+        return this;
     }
 
     /**
      * Enable mouse over selection of cells
      * @param selectionCallback Function that receives selection
      */
-    enableMouseOver(selectionCallback?: (selection: number) => any): void {
+    enableMouseOver(selectionCallback?: (selection: number) => any): SCVis {
         this._mouseOverCheck = true;
         if (selectionCallback) {
             this._mouseOverCallback = selectionCallback;
         }
+        return this;
     }
 
     /**
      * disable mouse pointer selection
      */
-    disableMouseOver(): void {
+    disableMouseOver(): SCVis {
         this._mouseOverCheck = false;
+        return this;
     }
 
     /**
      * Change size of cells
      * @param size Cell size, default = 1
      */
-    changeCellSize(size: number): void {
+    changeCellSize(size: number): SCVis {
         this._size = size;
         this._updateCellSize();
+        return this;
     }
 
     /**
@@ -931,11 +952,12 @@ class SCVis {
      * Change font size of all 3d labels in plot
      * @param size Font size of all labels. Default: 100
      */
-    changeLabelSize(size: number) {
+    changeLabelSize(size: number): SCVis {
         this._labelSize = size;
         for (let i = 0; i < this._labelTexts.length; i++) {
             this._labelTexts[i].fontSize = size;
         }
+        return this;
     }
 
     /**
@@ -943,9 +965,10 @@ class SCVis {
      * @param labelIdx Index of label
      * @param position New position of label in 3d space; array of x, y, z positions
      */
-    positionLabel(labelIdx: number, position: number[]): void {
+    positionLabel(labelIdx: number, position: number[]): SCVis {
         let pos = BABYLON.Vector3.FromArray(position);
         this._labels[labelIdx].position = pos;
+        return this;
     }
 
     /**
@@ -978,17 +1001,18 @@ class SCVis {
     /**
      * Enable shadow casting of cells
      */
-    showShadows(): void {
+    showShadows(): SCVis {
         if (!this._showShadows) {
             this._setupShadows();
         }
         this._showShadows = true;
+        return this;
     }
 
     /**
      * Disable shadow casting of cells
      */
-    hideShadows(): void {
+    hideShadows(): SCVis {
         if (this._showShadows) {
             this._pointLight.dispose();
             this._ground.dispose();
@@ -997,22 +1021,24 @@ class SCVis {
             this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
         }
         this._showShadows = false;
+        return this;
     }
 
     /**
      * Enable anaglyph (red, cyan) representation
      */
-    makeAnaglyph(): void {
+    makeAnaglyph(): SCVis {
         if (!this._isAnaglyph) {
             this._setupAnaglyph();
         }
         this._isAnaglyph = true;
+        return this;
     }
 
     /**
      * Creates new anaglyph camera and sets it as active
      */
-    private _setupAnaglyph() {
+    private _setupAnaglyph(): void {
         this._camera.dispose();
         this._camera = new BABYLON.AnaglyphArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), 0.033, this._scene);
         this._camera.attachControl(this._canvas, true);
@@ -1024,7 +1050,7 @@ class SCVis {
     /**
      * Disable anaglyph representation
      */
-    removeAnaglyph(): void {
+    removeAnaglyph(): SCVis {
         if (this._isAnaglyph) {
             this._camera.dispose();
             this._camera = new BABYLON.ArcRotateCamera("Camera", 0, 0, 10, BABYLON.Vector3.Zero(), this._scene);
@@ -1034,17 +1060,19 @@ class SCVis {
             this._scene.activeCamera = this._camera;
         }
         this._isAnaglyph = false;
+        return this;
     }
 
     /**
      * Start rendering the scene
      */
-    doRender(): void {
+    doRender(): SCVis {
         this._engine.runRenderLoop(() => {
             this._scene.render();
         });
         window.addEventListener('resize', () => {
             this._engine.resize();
         });
+        return this;
     }
 }

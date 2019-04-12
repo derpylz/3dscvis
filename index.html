@@ -4546,14 +4546,13 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             var vis = new SCVis("renderCanvas", coordinates);
-            vis.createScene();
-            vis.doRender();
+            vis.createScene()
+            .doRender()
+            .colorByClusters(clusters);
             vis.turntable = true;
-            vis.colorByClusters(clusters);
             
             var vis1 = new SCVis("renderCanvas1", coordinates);
-            vis1.createScene();
-            vis1.doRender();
+            vis1.createScene().doRender();
             var clLength = clusters.length;
             vis1.colorByValue(Array.from({
                 length: clLength
@@ -4561,19 +4560,19 @@
             vis1.turntable = true;
 
             var vis2 = new SCVis("renderCanvas2", coordinates);
-            vis2.createScene();
-            vis2.doRender();
-            vis2.changeCellSize(2);
-            vis2.showSelectionCube();
-            vis2.enablePicking();
+            vis2.createScene()
+            .doRender()
+            .changeCellSize(2)
+            .showSelectionCube()
+            .enablePicking();
 
             var vis3 = new SCVis("renderCanvas3", coordinates);
-            vis3.createScene();
-            vis3.doRender();
-            vis3.colorByClusters(clusters);
-            vis3.enableTimeSeries();
-            vis3.setTimeSeriesSpeed(20);
-            vis3.playTimeSeries();
+            vis3.createScene()
+            .doRender()
+            .colorByClusters(clusters)
+            .enableTimeSeries()
+            .setTimeSeriesSpeed(20)
+            .playTimeSeries();
         });
     </script>
 </head>
@@ -4585,17 +4584,15 @@
                 <td>
                     <pre style="max-height: 100px;padding-top: 0px;padding-bottom: 0px;"><code class="language-javascript">
                         var vis = new SCVis("renderCanvas", coordinates);
-                        vis.createScene();
-                        vis.doRender();
-                        vis.turntable = true;
+                        vis.createScene().doRender();
                         vis.colorByClusters(clusters);
+                        vis.turntable = true;
                     </code></pre>
                 </td>
                 <td>
                     <pre style="max-height: 100px;padding-top: 0px;padding-bottom: 0px;"><code class="language-javascript">
                         var vis = new SCVis("renderCanvas", coordinates);
-                        vis.createScene();
-                        vis.doRender();
+                        vis.createScene().doRender();
                         vis.turntable = true;
                         var numCells = coordinates.length;
                         vis.colorByValue(Array.from({length: numCells}, () => Math.random() * 10));
@@ -4614,8 +4611,7 @@
                 <td>
                     <pre style="max-height: 100px;padding-top: 0px;padding-bottom: 0px;"><code class="language-javascript">
                         var vis = new SCVis("renderCanvas", coordinates);
-                        vis.createScene();
-                        vis.doRender();
+                        vis.createScene().doRender();
                         vis.changeCellSize(2);
                         vis.enablePicking(); // cell selection with mouse
                         vis.showSelectionCube(); // or with selection cube
@@ -4624,11 +4620,9 @@
                 <td>
                     <pre style="max-height: 100px;padding-top: 0px;padding-bottom: 0px;"><code class="language-javascript">
                         var vis = new SCVis("renderCanvas", coordinates);
-                        vis.createScene();
-                        vis.doRender();
+                        vis.createScene().doRender();
                         vis.colorByClusters(clusters);
-                        vis.enableTimeSeries();
-                        vis.setTimeSeriesSpeed(20);
+                        vis.enableTimeSeries().setTimeSeriesSpeed(20);
                         vis.playTimeSeries();
                     </code></pre>
                 </td>

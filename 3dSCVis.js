@@ -104,6 +104,7 @@ var SCVis = /** @class */ (function () {
         this._scene.registerBeforeRender(this._prepRender.bind(this));
         this._scene.registerAfterRender(this._afterRender.bind(this));
         this._scene.onPointerDown = this._cellPicker.bind(this);
+        return this;
     };
     SCVis.prototype._cellPicker = function (_evt, pickResult) {
         if (this._cellPicking) {
@@ -492,14 +493,15 @@ var SCVis = /** @class */ (function () {
         if (this._isTimeSeries) {
             this._updateTimeSeriesCells();
         }
+        return this;
     };
     /**
      * Color cells by continuous values
      * @param values Array of same length as cells
      */
     SCVis.prototype.colorByValue = function (values) {
-        this._colors = chroma.scale(chroma.brewer.Viridis).mode('lch').colors(100);
-        for (var i = 0; i < 100; i++) {
+        this._colors = chroma.scale(chroma.brewer.Viridis).mode('lch').colors(256);
+        for (var i = 0; i < 256; i++) {
             this._colors[i] += "ff";
         }
         this._clusters = this._evenBins(values);
@@ -515,6 +517,7 @@ var SCVis = /** @class */ (function () {
         if (this._isTimeSeries) {
             this._updateTimeSeriesCells();
         }
+        return this;
     };
     /**
      * Directly pass colors for the visualization
@@ -537,6 +540,7 @@ var SCVis = /** @class */ (function () {
             this._SPS.particles[i].color = BABYLON.Color4.FromHexString(cl);
         }
         this._SPS.setParticles();
+        return this;
     };
     /**
      * Puts values into evenly spaced bins defined by the number of bins.
@@ -544,7 +548,7 @@ var SCVis = /** @class */ (function () {
      * @param binCount number of bins to create
      */
     SCVis.prototype._evenBins = function (vals, binCount) {
-        if (binCount === void 0) { binCount = 100; }
+        if (binCount === void 0) { binCount = 256; }
         var N = vals.length;
         var binSize = Math.floor(N / binCount);
         var binSizeArr = Array(binCount).fill(binSize);
@@ -680,6 +684,7 @@ var SCVis = /** @class */ (function () {
             this._showLegend = true;
             this._createLegend;
         }
+        return this;
     };
     /**
      * Hide the legend
@@ -689,6 +694,7 @@ var SCVis = /** @class */ (function () {
             this._legend.dispose();
         }
         this._showLegend = false;
+        return this;
     };
     /**
      * Show a cube for interactive selection of cells
@@ -701,6 +707,7 @@ var SCVis = /** @class */ (function () {
         if (selectionCallback) {
             this._selectionCallback = selectionCallback;
         }
+        return this;
     };
     /**
      * Hide the selection cube
@@ -709,30 +716,35 @@ var SCVis = /** @class */ (function () {
         this._showSelectCube = false;
         this._selectionCube.visibility = 0;
         this._selectionGizmo.gizmoLayer.shouldRender = false;
+        return this;
     };
     /**
      * Display the cell colors as a time series
      */
     SCVis.prototype.enableTimeSeries = function () {
         this._isTimeSeries = true;
+        return this;
     };
     /**
      * Return to normal color mode
      */
     SCVis.prototype.disableTimeSeries = function () {
         this._isTimeSeries = false;
+        return this;
     };
     /**
      * Go through time series automatically
      */
     SCVis.prototype.playTimeSeries = function () {
         this._playingTimeSeries = true;
+        return this;
     };
     /**
      * Pause playback of the time series
      */
     SCVis.prototype.pauseTimeSeries = function () {
         this._playingTimeSeries = false;
+        return this;
     };
     /**
      * Set speed of time series playback
@@ -740,6 +752,7 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype.setTimeSeriesSpeed = function (speed) {
         this._timeSeriesSpeed = speed;
+        return this;
     };
     /**
      * Color the cells at the specified time series index
@@ -749,12 +762,14 @@ var SCVis = /** @class */ (function () {
         this._timeSeriesIndex = index;
         this._setAllCellsInvisible();
         this._updateTimeSeriesCells();
+        return this;
     };
     /**
      * Record an animated gif of the cell embedding
      */
     SCVis.prototype.startRecording = function () {
         this._record = true;
+        return this;
     };
     /**
      * Enable mouse pointer selection of cells
@@ -765,12 +780,14 @@ var SCVis = /** @class */ (function () {
         if (selectionCallback) {
             this._selectionCallback = selectionCallback;
         }
+        return this;
     };
     /**
      * disable mouse pointer selection
      */
     SCVis.prototype.disablePicking = function () {
         this._cellPicking = false;
+        return this;
     };
     /**
      * Enable mouse over selection of cells
@@ -781,12 +798,14 @@ var SCVis = /** @class */ (function () {
         if (selectionCallback) {
             this._mouseOverCallback = selectionCallback;
         }
+        return this;
     };
     /**
      * disable mouse pointer selection
      */
     SCVis.prototype.disableMouseOver = function () {
         this._mouseOverCheck = false;
+        return this;
     };
     /**
      * Change size of cells
@@ -795,6 +814,7 @@ var SCVis = /** @class */ (function () {
     SCVis.prototype.changeCellSize = function (size) {
         this._size = size;
         this._updateCellSize();
+        return this;
     };
     /**
      * Add a 3d label to the plot
@@ -844,6 +864,7 @@ var SCVis = /** @class */ (function () {
         for (var i = 0; i < this._labelTexts.length; i++) {
             this._labelTexts[i].fontSize = size;
         }
+        return this;
     };
     /**
      * Move Label to a new position
@@ -853,6 +874,7 @@ var SCVis = /** @class */ (function () {
     SCVis.prototype.positionLabel = function (labelIdx, position) {
         var pos = BABYLON.Vector3.FromArray(position);
         this._labels[labelIdx].position = pos;
+        return this;
     };
     /**
      * Adds a point-light, a ground and enables shadow casting
@@ -882,6 +904,7 @@ var SCVis = /** @class */ (function () {
             this._setupShadows();
         }
         this._showShadows = true;
+        return this;
     };
     /**
      * Disable shadow casting of cells
@@ -895,6 +918,7 @@ var SCVis = /** @class */ (function () {
             this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
         }
         this._showShadows = false;
+        return this;
     };
     /**
      * Enable anaglyph (red, cyan) representation
@@ -904,6 +928,7 @@ var SCVis = /** @class */ (function () {
             this._setupAnaglyph();
         }
         this._isAnaglyph = true;
+        return this;
     };
     /**
      * Creates new anaglyph camera and sets it as active
@@ -929,6 +954,7 @@ var SCVis = /** @class */ (function () {
             this._scene.activeCamera = this._camera;
         }
         this._isAnaglyph = false;
+        return this;
     };
     /**
      * Start rendering the scene
@@ -941,6 +967,7 @@ var SCVis = /** @class */ (function () {
         window.addEventListener('resize', function () {
             _this._engine.resize();
         });
+        return this;
     };
     return SCVis;
 }());
