@@ -2,6 +2,16 @@
 /// <reference path="babylon.gui.d.ts" />
 /// <reference path="chroma-js.d.ts" />
 /// <reference path="ccapture.d.ts" />
+var Label = /** @class */ (function () {
+    function Label(mesh, background, text) {
+        this.timeLinked = false;
+        this.linkedTo = [];
+        this.mesh = mesh;
+        this.background = background;
+        this.text = text;
+    }
+    return Label;
+}());
 var SCVis = /** @class */ (function () {
     /**
      * Initialize the 3d visualization
@@ -26,14 +36,16 @@ var SCVis = /** @class */ (function () {
         this._cellPicking = false;
         this._selectionCallback = function (selection) { return false; };
         this._labels = [];
-        this._labelBackgrounds = [];
-        this._labelTexts = [];
+        // private _labels: BABYLON.Mesh[] = [];
+        // private _labelBackgrounds: BABYLON.GUI.Rectangle[] = [];
+        // private _labelTexts: BABYLON.GUI.TextBlock[] = [];
         this._showLabels = false;
         this._labelSize = 100;
         this._showShadows = false;
         this._mouseOverCheck = false;
         this._mouseOverCallback = function (selection) { return false; };
         this._isAnaglyph = false;
+        this._recordingRotationMod = 2;
         this.turntable = false;
         this._coords = coords;
         this._canvas = document.getElementById(canvasElement);
@@ -163,7 +175,7 @@ var SCVis = /** @class */ (function () {
             var axis3 = BABYLON.Vector3.Cross(axis1, this._camera.position);
             var axis2 = BABYLON.Vector3.Cross(axis1, axis3);
             for (var i = 0; i < this._labels.length; i++) {
-                this._labels[i].rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
+                this._labels[i].mesh.rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
             }
         }
         if (this._mouseOverCheck) {
@@ -177,20 +189,28 @@ var SCVis = /** @class */ (function () {
         }
         if (this._showLabels) {
             var meshUnderPointer = this._scene.meshUnderPointer;
-            var labelIdx = this._labels.indexOf(meshUnderPointer);
-            if (labelIdx != -1) {
-                for (var i = 0; i < this._labelBackgrounds.length; i++) {
-                    if (i != labelIdx) {
-                        this._labelBackgrounds[i].alpha = 0;
-                    }
+            for (var i = 0; i < this._labels.length; i++) {
+                var label = this._labels[i];
+                if (label.mesh === meshUnderPointer) {
+                    label.background.alpha = 1;
                 }
-                this._labelBackgrounds[labelIdx].alpha = 1;
-            }
-            else {
-                for (var i = 0; i < this._labelBackgrounds.length; i++) {
-                    this._labelBackgrounds[i].alpha = 0;
+                else {
+                    label.background.alpha = 0;
                 }
             }
+            // const labelIdx = this._labels.indexOf(meshUnderPointer)
+            // if (labelIdx != -1) {
+            //     for (let i = 0; i < this._labelBackgrounds.length; i++) {
+            //         if (i != labelIdx) {
+            //             this._labelBackgrounds[i].alpha = 0;
+            //         }
+            //     }
+            //     this._labelBackgrounds[labelIdx].alpha = 1;
+            // } else {
+            //     for (let i = 0; i < this._labelBackgrounds.length; i++) {
+            //         this._labelBackgrounds[i].alpha = 0;
+            //     }
+            // }
         }
     };
     /**
@@ -219,7 +239,7 @@ var SCVis = /** @class */ (function () {
                     workers: 8
                 });
                 this._capturer.start();
-                this._rotationRate = 0.02;
+                this._rotationRate = this._rotationRate * this._recordingRotationMod;
                 if (this._playingTimeSeries) {
                     this._setAllCellsInvisible();
                     this._timeSeriesIndex = 0;
@@ -248,7 +268,7 @@ var SCVis = /** @class */ (function () {
                 this._capturer.stop();
                 this._capturer.save();
                 this._turned = 0;
-                this._rotationRate = 0.01;
+                this._rotationRate = this._rotationRate / this._recordingRotationMod;
                 this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
                 if (!this._wasTurning) {
                     this.turntable = false;
@@ -615,8 +635,13 @@ var SCVis = /** @class */ (function () {
         else {
             // number of clusters
             var n = this._clusterNames.length;
+            var breakN = 12;
             // adjust height to fit all legend entries
-            if (n > 12) {
+            if (n > 24) {
+                grid.addRowDefinition(450, true);
+                breakN = 18;
+            }
+            else if (n > 12) {
                 grid.addRowDefinition(300, true);
             }
             else {
@@ -636,9 +661,9 @@ var SCVis = /** @class */ (function () {
                 innerGrid.addColumnDefinition(0.2);
                 innerGrid.addColumnDefinition(0.8);
             }
-            for (var i = 0; i < n && i < 13; i++) {
+            for (var i = 0; i < n && i < breakN + 1; i++) {
                 if (n > 12) {
-                    innerGrid.addRowDefinition(1 / 12);
+                    innerGrid.addRowDefinition(1 / breakN);
                 }
                 else {
                     innerGrid.addRowDefinition(1 / n);
@@ -654,8 +679,8 @@ var SCVis = /** @class */ (function () {
                 legendColor.width = "20px";
                 legendColor.height = "20px";
                 // use second column for many entries
-                if (i > 11) {
-                    innerGrid.addControl(legendColor, i - 12, 2);
+                if (i > breakN - 1) {
+                    innerGrid.addControl(legendColor, i - breakN, 2);
                 }
                 else {
                     innerGrid.addControl(legendColor, i, 0);
@@ -666,8 +691,8 @@ var SCVis = /** @class */ (function () {
                 legendText.color = "black";
                 legendText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
                 // use second column for many entries
-                if (i > 11) {
-                    innerGrid.addControl(legendText, i - 12, 3);
+                if (i > breakN - 1) {
+                    innerGrid.addControl(legendText, i - breakN, 3);
                 }
                 else {
                     innerGrid.addControl(legendText, i, 1);
@@ -817,6 +842,14 @@ var SCVis = /** @class */ (function () {
         return this;
     };
     /**
+     * Set rotation rate modifier.
+     * @param modifier 2 for same speed as live preview
+     */
+    SCVis.prototype.changeRecordingRotationRate = function (modifier) {
+        this._recordingRotationMod = modifier;
+        return this;
+    };
+    /**
      * Add a 3d label to the plot
      * @param text Label title
      * @param [moveCallback] On dragging of label in 3d plot, the final position will be passed to this function
@@ -834,13 +867,14 @@ var SCVis = /** @class */ (function () {
         background.color = "red";
         background.alpha = 0;
         advancedTexture.addControl(background);
-        this._labelBackgrounds.push(background);
+        // this._labelBackgrounds.push(background);
         var textBlock = new BABYLON.GUI.TextBlock();
         textBlock.text = text;
         textBlock.color = "black";
+        textBlock.textWrapping = true;
         textBlock.fontSize = this._labelSize;
         advancedTexture.addControl(textBlock);
-        this._labelTexts.push(textBlock);
+        // this._labelTexts.push(textBlock);
         var labelDragBehavior = new BABYLON.PointerDragBehavior();
         labelDragBehavior.onDragEndObservable.add(function () {
             if (moveCallback) {
@@ -851,7 +885,8 @@ var SCVis = /** @class */ (function () {
             }
         });
         plane.addBehavior(labelDragBehavior);
-        this._labels.push(plane);
+        // this._labels.push(plane);
+        this._labels.push(new Label(plane, background, textBlock));
         this._showLabels = true;
         return labelIdx;
     };
@@ -861,8 +896,8 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype.changeLabelSize = function (size) {
         this._labelSize = size;
-        for (var i = 0; i < this._labelTexts.length; i++) {
-            this._labelTexts[i].fontSize = size;
+        for (var i = 0; i < this._labels.length; i++) {
+            this._labels[i].text.fontSize = size;
         }
         return this;
     };
@@ -873,7 +908,7 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype.positionLabel = function (labelIdx, position) {
         var pos = BABYLON.Vector3.FromArray(position);
-        this._labels[labelIdx].position = pos;
+        this._labels[labelIdx].mesh.position = pos;
         return this;
     };
     /**

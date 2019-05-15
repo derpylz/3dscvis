@@ -4,6 +4,22 @@
 /// <reference path="ccapture.d.ts" />
 
 
+class Label {
+    mesh: BABYLON.Mesh;
+    background: BABYLON.GUI.Rectangle;
+    text: BABYLON.GUI.TextBlock;
+    timeLinked: boolean = false;
+    linkedTo: number[] = [];
+
+    constructor(mesh: BABYLON.Mesh, background: BABYLON.GUI.Rectangle, text: BABYLON.GUI.TextBlock) {
+        this.mesh = mesh;
+        this.background = background;
+        this.text = text;
+
+    }
+}
+
+
 class SCVis {
     private _canvas: HTMLCanvasElement;
     private _engine: BABYLON.Engine;
@@ -39,9 +55,7 @@ class SCVis {
     private _turned: number = 0;
     private _cellPicking: boolean = false;
     private _selectionCallback = function (selection: number[]) { return false; };
-    private _labels: BABYLON.Mesh[] = [];
-    private _labelBackgrounds: BABYLON.GUI.Rectangle[] = [];
-    private _labelTexts: BABYLON.GUI.TextBlock[] = [];
+    private _labels: Label[] = [];
     private _showLabels: boolean = false;
     private _labelSize: number = 100;
     private _showShadows: boolean = false;
@@ -49,6 +63,7 @@ class SCVis {
     private _mouseOverCheck: boolean = false;
     private _mouseOverCallback = function (selection: number) { return false; };
     private _isAnaglyph: boolean = false;
+    private _recordingRotationMod = 2;
 
     turntable: boolean = false;
 
@@ -156,7 +171,7 @@ class SCVis {
         this._scene.registerAfterRender(this._afterRender.bind(this));
 
         this._scene.onPointerDown = this._cellPicker.bind(this);
-        
+
         return this;
     }
 
@@ -217,7 +232,7 @@ class SCVis {
             let axis2 = BABYLON.Vector3.Cross(axis1, axis3);
 
             for (let i = 0; i < this._labels.length; i++) {
-                this._labels[i].rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
+                this._labels[i].mesh.rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
             }
         }
         if (this._mouseOverCheck) {
@@ -231,17 +246,12 @@ class SCVis {
         }
         if (this._showLabels) {
             const meshUnderPointer = this._scene.meshUnderPointer as BABYLON.Mesh;
-            const labelIdx = this._labels.indexOf(meshUnderPointer)
-            if (labelIdx != -1) {
-                for (let i = 0; i < this._labelBackgrounds.length; i++) {
-                    if (i != labelIdx) {
-                        this._labelBackgrounds[i].alpha = 0;
-                    }
-                }
-                this._labelBackgrounds[labelIdx].alpha = 1;
-            } else {
-                for (let i = 0; i < this._labelBackgrounds.length; i++) {
-                    this._labelBackgrounds[i].alpha = 0;
+            for (let i = 0; i < this._labels.length; i++) {
+                const label = this._labels[i];
+                if (label.mesh === meshUnderPointer) {
+                    label.background.alpha = 1;
+                } else {
+                    label.background.alpha = 0;
                 }
             }
         }
@@ -272,7 +282,7 @@ class SCVis {
                     workers: 8
                 });
                 this._capturer.start();
-                this._rotationRate = 0.02;
+                this._rotationRate = this._rotationRate * this._recordingRotationMod;
                 if (this._playingTimeSeries) {
                     this._setAllCellsInvisible();
                     this._timeSeriesIndex = 0;
@@ -299,7 +309,7 @@ class SCVis {
                 this._capturer.stop();
                 this._capturer.save();
                 this._turned = 0;
-                this._rotationRate = 0.01;
+                this._rotationRate = this._rotationRate / this._recordingRotationMod;
                 this._hl2.diffuse = new BABYLON.Color3(0.8, 0.8, 0.8);
                 if (!this._wasTurning) {
                     this.turntable = false;
@@ -687,8 +697,12 @@ class SCVis {
         } else {
             // number of clusters
             var n = this._clusterNames.length;
+            var breakN = 12;
             // adjust height to fit all legend entries
-            if (n > 12) {
+            if (n > 24) {
+                grid.addRowDefinition(450, true);
+                breakN = 18;
+            } else if (n > 12) {
                 grid.addRowDefinition(300, true);
             } else {
                 grid.addRowDefinition(25 * n, true);
@@ -707,9 +721,9 @@ class SCVis {
                 innerGrid.addColumnDefinition(0.2);
                 innerGrid.addColumnDefinition(0.8);
             }
-            for (let i = 0; i < n && i < 13; i++) {
+            for (let i = 0; i < n && i < breakN + 1; i++) {
                 if (n > 12) {
-                    innerGrid.addRowDefinition(1 / 12);
+                    innerGrid.addRowDefinition(1 / breakN);
                 } else {
                     innerGrid.addRowDefinition(1 / n);
                 }
@@ -725,8 +739,8 @@ class SCVis {
                 legendColor.width = "20px";
                 legendColor.height = "20px";
                 // use second column for many entries
-                if (i > 11) {
-                    innerGrid.addControl(legendColor, i - 12, 2);
+                if (i > breakN - 1) {
+                    innerGrid.addControl(legendColor, i - breakN, 2);
                 } else {
                     innerGrid.addControl(legendColor, i, 0);
                 }
@@ -736,8 +750,8 @@ class SCVis {
                 legendText.color = "black";
                 legendText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
                 // use second column for many entries
-                if (i > 11) {
-                    innerGrid.addControl(legendText, i - 12, 3);
+                if (i > breakN - 1) {
+                    innerGrid.addControl(legendText, i - breakN, 3);
                 } else {
                     innerGrid.addControl(legendText, i, 1);
                 }
@@ -903,6 +917,15 @@ class SCVis {
     }
 
     /**
+     * Set rotation rate modifier.
+     * @param modifier 2 for same speed as live preview
+     */
+    changeRecordingRotationRate(modifier: number): SCVis {
+        this._recordingRotationMod = modifier;
+        return this;
+    }
+
+    /**
      * Add a 3d label to the plot
      * @param text Label title
      * @param [moveCallback] On dragging of label in 3d plot, the final position will be passed to this function
@@ -923,14 +946,13 @@ class SCVis {
         background.color = "red";
         background.alpha = 0
         advancedTexture.addControl(background);
-        this._labelBackgrounds.push(background);
 
         let textBlock = new BABYLON.GUI.TextBlock();
         textBlock.text = text;
         textBlock.color = "black";
+        textBlock.textWrapping = true;
         textBlock.fontSize = this._labelSize;
         advancedTexture.addControl(textBlock);
-        this._labelTexts.push(textBlock);
 
         let labelDragBehavior = new BABYLON.PointerDragBehavior();
         labelDragBehavior.onDragEndObservable.add(() => {
@@ -942,7 +964,7 @@ class SCVis {
         });
         plane.addBehavior(labelDragBehavior);
 
-        this._labels.push(plane);
+        this._labels.push(new Label(plane, background, textBlock));
 
         this._showLabels = true;
         return labelIdx;
@@ -954,8 +976,8 @@ class SCVis {
      */
     changeLabelSize(size: number): SCVis {
         this._labelSize = size;
-        for (let i = 0; i < this._labelTexts.length; i++) {
-            this._labelTexts[i].fontSize = size;
+        for (let i = 0; i < this._labels.length; i++) {
+            this._labels[i].text.fontSize = size;
         }
         return this;
     }
@@ -967,7 +989,7 @@ class SCVis {
      */
     positionLabel(labelIdx: number, position: number[]): SCVis {
         let pos = BABYLON.Vector3.FromArray(position);
-        this._labels[labelIdx].position = pos;
+        this._labels[labelIdx].mesh.position = pos;
         return this;
     }
 
