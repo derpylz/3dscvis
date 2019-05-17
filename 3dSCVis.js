@@ -846,6 +846,7 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype.addLabel = function (text, moveCallback) {
         var labelId = "l" + this._labelCounter;
+        this._labelCounter += 1;
         var plane = BABYLON.MeshBuilder.CreatePlane(labelId, {
             width: 5,
             height: 5
