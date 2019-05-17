@@ -35,10 +35,8 @@ var SCVis = /** @class */ (function () {
         this._turned = 0;
         this._cellPicking = false;
         this._selectionCallback = function (selection) { return false; };
-        this._labels = [];
-        // private _labels: BABYLON.Mesh[] = [];
-        // private _labelBackgrounds: BABYLON.GUI.Rectangle[] = [];
-        // private _labelTexts: BABYLON.GUI.TextBlock[] = [];
+        this._labels = {};
+        this._labelCounter = 0;
         this._showLabels = false;
         this._labelSize = 100;
         this._showShadows = false;
@@ -174,8 +172,11 @@ var SCVis = /** @class */ (function () {
             var axis1 = BABYLON.Vector3.Cross(this._camera.position, BABYLON.Axis.Y);
             var axis3 = BABYLON.Vector3.Cross(axis1, this._camera.position);
             var axis2 = BABYLON.Vector3.Cross(axis1, axis3);
-            for (var i = 0; i < this._labels.length; i++) {
-                this._labels[i].mesh.rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
+            for (var labelId in this._labels) {
+                if (this._labels.hasOwnProperty(labelId)) {
+                    var label = this._labels[labelId];
+                    label.mesh.rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
+                }
             }
         }
         if (this._mouseOverCheck) {
@@ -189,28 +190,17 @@ var SCVis = /** @class */ (function () {
         }
         if (this._showLabels) {
             var meshUnderPointer = this._scene.meshUnderPointer;
-            for (var i = 0; i < this._labels.length; i++) {
-                var label = this._labels[i];
-                if (label.mesh === meshUnderPointer) {
-                    label.background.alpha = 1;
-                }
-                else {
-                    label.background.alpha = 0;
+            for (var labelId in this._labels) {
+                if (this._labels.hasOwnProperty(labelId)) {
+                    var label = this._labels[labelId];
+                    if (label.mesh === meshUnderPointer) {
+                        label.background.alpha = 1;
+                    }
+                    else {
+                        label.background.alpha = 0;
+                    }
                 }
             }
-            // const labelIdx = this._labels.indexOf(meshUnderPointer)
-            // if (labelIdx != -1) {
-            //     for (let i = 0; i < this._labelBackgrounds.length; i++) {
-            //         if (i != labelIdx) {
-            //             this._labelBackgrounds[i].alpha = 0;
-            //         }
-            //     }
-            //     this._labelBackgrounds[labelIdx].alpha = 1;
-            // } else {
-            //     for (let i = 0; i < this._labelBackgrounds.length; i++) {
-            //         this._labelBackgrounds[i].alpha = 0;
-            //     }
-            // }
         }
     };
     /**
@@ -855,8 +845,8 @@ var SCVis = /** @class */ (function () {
      * @param [moveCallback] On dragging of label in 3d plot, the final position will be passed to this function
      */
     SCVis.prototype.addLabel = function (text, moveCallback) {
-        var labelIdx = this._labels.length;
-        var plane = BABYLON.MeshBuilder.CreatePlane('label_' + labelIdx, {
+        var labelId = "l" + this._labelCounter;
+        var plane = BABYLON.MeshBuilder.CreatePlane(labelId, {
             width: 5,
             height: 5
         }, this._scene);
@@ -867,14 +857,12 @@ var SCVis = /** @class */ (function () {
         background.color = "red";
         background.alpha = 0;
         advancedTexture.addControl(background);
-        // this._labelBackgrounds.push(background);
         var textBlock = new BABYLON.GUI.TextBlock();
         textBlock.text = text;
         textBlock.color = "black";
         textBlock.textWrapping = true;
         textBlock.fontSize = this._labelSize;
         advancedTexture.addControl(textBlock);
-        // this._labelTexts.push(textBlock);
         var labelDragBehavior = new BABYLON.PointerDragBehavior();
         labelDragBehavior.onDragEndObservable.add(function () {
             if (moveCallback) {
@@ -885,10 +873,9 @@ var SCVis = /** @class */ (function () {
             }
         });
         plane.addBehavior(labelDragBehavior);
-        // this._labels.push(plane);
-        this._labels.push(new Label(plane, background, textBlock));
+        this._labels[labelId] = new Label(plane, background, textBlock);
         this._showLabels = true;
-        return labelIdx;
+        return labelId;
     };
     /**
      * Change font size of all 3d labels in plot
@@ -896,19 +883,43 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype.changeLabelSize = function (size) {
         this._labelSize = size;
-        for (var i = 0; i < this._labels.length; i++) {
-            this._labels[i].text.fontSize = size;
+        for (var labelId in this._labels) {
+            if (this._labels.hasOwnProperty(labelId)) {
+                var label = this._labels[labelId];
+                label.text.fontSize = size;
+            }
         }
         return this;
     };
     /**
      * Move Label to a new position
-     * @param labelIdx Index of label
+     * @param labelId Id of label
      * @param position New position of label in 3d space; array of x, y, z positions
      */
-    SCVis.prototype.positionLabel = function (labelIdx, position) {
+    SCVis.prototype.positionLabel = function (labelId, position) {
         var pos = BABYLON.Vector3.FromArray(position);
-        this._labels[labelIdx].mesh.position = pos;
+        this._labels[labelId].mesh.position = pos;
+        return this;
+    };
+    /**
+     * Change text of a label
+     * @param labelId Id of label
+     * @param text New text for label
+     */
+    SCVis.prototype.changeLabelText = function (labelId, text) {
+        this._labels[labelId].text.text = text;
+        return this;
+    };
+    /**
+     * Delete a label
+     * @param labelId Id of label
+     */
+    SCVis.prototype.removeLabel = function (labelId) {
+        var label = this._labels[labelId];
+        label.text.dispose();
+        label.background.dispose();
+        label.mesh.dispose();
+        delete this._labels[labelId];
         return this;
     };
     /**

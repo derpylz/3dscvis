@@ -3,7 +3,6 @@
 /// <reference path="chroma-js.d.ts" />
 /// <reference path="ccapture.d.ts" />
 
-
 class Label {
     mesh: BABYLON.Mesh;
     background: BABYLON.GUI.Rectangle;
@@ -55,7 +54,8 @@ class SCVis {
     private _turned: number = 0;
     private _cellPicking: boolean = false;
     private _selectionCallback = function (selection: number[]) { return false; };
-    private _labels: Label[] = [];
+    private _labels: {[name: string]: Label} = {};
+    private _labelCounter: number = 0;
     private _showLabels: boolean = false;
     private _labelSize: number = 100;
     private _showShadows: boolean = false;
@@ -231,8 +231,11 @@ class SCVis {
             let axis3 = BABYLON.Vector3.Cross(axis1, this._camera.position);
             let axis2 = BABYLON.Vector3.Cross(axis1, axis3);
 
-            for (let i = 0; i < this._labels.length; i++) {
-                this._labels[i].mesh.rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
+            for (const labelId in this._labels) {
+                if (this._labels.hasOwnProperty(labelId)) {
+                    const label = this._labels[labelId];
+                    label.mesh.rotation = BABYLON.Vector3.RotationFromAxis(axis1, axis3, axis2);
+                }
             }
         }
         if (this._mouseOverCheck) {
@@ -246,12 +249,15 @@ class SCVis {
         }
         if (this._showLabels) {
             const meshUnderPointer = this._scene.meshUnderPointer as BABYLON.Mesh;
-            for (let i = 0; i < this._labels.length; i++) {
-                const label = this._labels[i];
-                if (label.mesh === meshUnderPointer) {
-                    label.background.alpha = 1;
-                } else {
-                    label.background.alpha = 0;
+
+            for (const labelId in this._labels) {
+                if (this._labels.hasOwnProperty(labelId)) {
+                    const label = this._labels[labelId];
+                    if (label.mesh === meshUnderPointer) {
+                        label.background.alpha = 1;
+                    } else {
+                        label.background.alpha = 0;
+                    }
                 }
             }
         }
@@ -930,9 +936,10 @@ class SCVis {
      * @param text Label title
      * @param [moveCallback] On dragging of label in 3d plot, the final position will be passed to this function
      */
-    addLabel(text: string, moveCallback?: (position: BABYLON.Vector3) => any): number {
-        let labelIdx = this._labels.length;
-        let plane = BABYLON.MeshBuilder.CreatePlane('label_' + labelIdx, {
+    addLabel(text: string, moveCallback?: (position: BABYLON.Vector3) => any): string {
+        let labelId = "l" + this._labelCounter;
+        this._labelCounter += 1;
+        let plane = BABYLON.MeshBuilder.CreatePlane(labelId, {
             width: 5,
             height: 5
         }, this._scene);
@@ -964,10 +971,10 @@ class SCVis {
         });
         plane.addBehavior(labelDragBehavior);
 
-        this._labels.push(new Label(plane, background, textBlock));
+        this._labels[labelId] = new Label(plane, background, textBlock);
 
         this._showLabels = true;
-        return labelIdx;
+        return labelId;
     }
 
     /**
@@ -976,21 +983,47 @@ class SCVis {
      */
     changeLabelSize(size: number): SCVis {
         this._labelSize = size;
-        for (let i = 0; i < this._labels.length; i++) {
-            this._labels[i].text.fontSize = size;
+        for (const labelId in this._labels) {
+            if (this._labels.hasOwnProperty(labelId)) {
+                const label = this._labels[labelId];
+                label.text.fontSize = size;
+            }
         }
         return this;
     }
 
     /**
      * Move Label to a new position
-     * @param labelIdx Index of label
+     * @param labelId Id of label
      * @param position New position of label in 3d space; array of x, y, z positions
      */
-    positionLabel(labelIdx: number, position: number[]): SCVis {
+    positionLabel(labelId: string, position: number[]): SCVis {
         let pos = BABYLON.Vector3.FromArray(position);
-        this._labels[labelIdx].mesh.position = pos;
+        this._labels[labelId].mesh.position = pos;
         return this;
+    }
+
+    /**
+     * Change text of a label
+     * @param labelId Id of label
+     * @param text New text for label
+     */
+    changeLabelText(labelId: string, text: string): SCVis {
+        this._labels[labelId].text.text = text;
+        return this
+    }
+
+    /**
+     * Delete a label
+     * @param labelId Id of label
+     */
+    removeLabel(labelId: string): SCVis {
+        const label = this._labels[labelId];
+        label.text.dispose();
+        label.background.dispose();
+        label.mesh.dispose();
+        delete this._labels[labelId];
+        return this
     }
 
     /**
