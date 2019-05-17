@@ -146,6 +146,7 @@ var SCVis = /** @class */ (function () {
                     if (this._counter >= this._timeSeriesSpeed) {
                         this._timeSeriesIndex += 1;
                         this._updateTimeSeriesCells();
+                        this._updateTimeSeriesLabels();
                         this._counter = 0;
                     }
                     else {
@@ -235,6 +236,7 @@ var SCVis = /** @class */ (function () {
                     this._timeSeriesIndex = 0;
                     this._counter = 0;
                     this._updateTimeSeriesCells();
+                    this._updateTimeSeriesLabels();
                     var nSteps = Math.max.apply(Math, this._clusters) + 1;
                     this._prevTimeSeriesSpeed = this._timeSeriesSpeed;
                     this._timeSeriesSpeed = Math.floor((2 * Math.PI / this._rotationRate / nSteps) - 1);
@@ -322,7 +324,7 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype._setAllCellsInvisible = function () {
         for (var i = 0; i < this._SPS.nbParticles; i++) {
-            this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
+            this._SPS.particles[i].color = new BABYLON.Color4(0.9, 0.9, 0.9, 0.3);
         }
         this._SPS.setParticles();
     };
@@ -353,17 +355,40 @@ var SCVis = /** @class */ (function () {
             }
             else if (this._clusters[i] == indexBefore) {
                 if (this._setTimeSeries) {
-                    this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.5);
+                    this._SPS.particles[i].color = new BABYLON.Color4(0.9, 0.9, 0.9, 0.5);
                 }
                 else {
-                    this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
+                    this._SPS.particles[i].color = new BABYLON.Color4(0.9, 0.9, 0.9, 0.3);
                 }
             }
             else if (this._clusters[i] == indexBefore2 && this._setTimeSeries) {
-                this._SPS.particles[i].color = new BABYLON.Color4(1, 1, 1, 0.3);
+                this._SPS.particles[i].color = new BABYLON.Color4(0.9, 0.9, 0.9, 0.3);
             }
         }
         this._SPS.setParticles();
+    };
+    SCVis.prototype._updateTimeSeriesLabels = function () {
+        for (var labelId in this._labels) {
+            if (this._labels.hasOwnProperty(labelId)) {
+                var label = this._labels[labelId];
+                if (label.timeLinked) {
+                    if (label.linkedTo.indexOf(this._timeSeriesIndex) > -1) {
+                        label.mesh.visibility = 1;
+                    }
+                    else {
+                        label.mesh.visibility = 0;
+                    }
+                }
+            }
+        }
+    };
+    SCVis.prototype._showAllLabels = function () {
+        for (var labelId in this._labels) {
+            if (this._labels.hasOwnProperty(labelId)) {
+                var label = this._labels[labelId];
+                label.mesh.visibility = 1;
+            }
+        }
     };
     /**
      * Color cells according to this._clusters and this._colors
@@ -502,6 +527,7 @@ var SCVis = /** @class */ (function () {
         }
         if (this._isTimeSeries) {
             this._updateTimeSeriesCells();
+            this._updateTimeSeriesLabels();
         }
         return this;
     };
@@ -526,6 +552,7 @@ var SCVis = /** @class */ (function () {
         }
         if (this._isTimeSeries) {
             this._updateTimeSeriesCells();
+            this._updateTimeSeriesLabels();
         }
         return this;
     };
@@ -738,6 +765,7 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype.enableTimeSeries = function () {
         this._isTimeSeries = true;
+        this._updateTimeSeriesLabels();
         return this;
     };
     /**
@@ -745,6 +773,7 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype.disableTimeSeries = function () {
         this._isTimeSeries = false;
+        this._showAllLabels();
         return this;
     };
     /**
@@ -777,6 +806,7 @@ var SCVis = /** @class */ (function () {
         this._timeSeriesIndex = index;
         this._setAllCellsInvisible();
         this._updateTimeSeriesCells();
+        this._updateTimeSeriesLabels();
         return this;
     };
     /**
@@ -921,6 +951,31 @@ var SCVis = /** @class */ (function () {
         label.background.dispose();
         label.mesh.dispose();
         delete this._labels[labelId];
+        return this;
+    };
+    /**
+     * Link a label to timepoints in the time series visualization. Replaces previous assignments.
+     * @param labelId Id of label
+     * @param linking Comma separated timepoints to be linked to; Multiple consecutive timepoints can be annotated as n-m e.g. "1-4, 6, 9-12"
+     */
+    SCVis.prototype.timeLinkLabel = function (labelId, linking) {
+        var label = this._labels[labelId];
+        label.timeLinked = true;
+        label.linkedTo = [];
+        linking = linking.replace(/\s/g, '');
+        var linkArray = linking.split(",");
+        for (var idx = 0; idx < linkArray.length; idx++) {
+            var link = linkArray[idx];
+            if (link.indexOf("-") > -1) {
+                var lA = link.split("-");
+                for (var i = parseInt(lA[0]); i <= parseInt(lA[1]); i++) {
+                    label.linkedTo.push(i);
+                }
+            }
+            else {
+                label.linkedTo.push(parseInt(link));
+            }
+        }
         return this;
     };
     /**
