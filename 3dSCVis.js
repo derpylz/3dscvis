@@ -249,7 +249,7 @@ var SCVis = /** @class */ (function () {
                     this.turntable = true;
                 }
             }
-            if (this._turned < 2 * Math.PI) {
+            if (this._turned < 2 * Math.PI - this._rotationRate) {
                 // while recording, count rotation and capture screenshots
                 this._turned += this._rotationRate;
                 this._capturer.capture(this._canvas);
