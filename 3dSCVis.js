@@ -333,27 +333,27 @@ var SCVis = /** @class */ (function () {
      */
     SCVis.prototype._updateTimeSeriesCells = function () {
         // reset timeSeriesIndex to 0 to loop
-        if (this._timeSeriesIndex > Math.max.apply(Math, this._clusters)) {
+        if (this._timeSeriesIndex > Math.max.apply(Math, this._timeSeriesVariable)) {
             this._timeSeriesIndex = 0;
-            var indexBefore = Math.max.apply(Math, this._clusters);
+            var indexBefore = Math.max.apply(Math, this._timeSeriesVariable);
             var indexBefore2 = indexBefore - 1;
         }
         else {
             var indexBefore = this._timeSeriesIndex - 1;
             if (indexBefore < 0) {
-                indexBefore = Math.max.apply(Math, this._clusters);
+                indexBefore = Math.max.apply(Math, this._timeSeriesVariable);
             }
             var indexBefore2 = indexBefore - 1;
             if (indexBefore2 < 0) {
-                indexBefore2 = Math.max.apply(Math, this._clusters);
+                indexBefore2 = Math.max.apply(Math, this._timeSeriesVariable);
             }
         }
         for (var i = 0; i < this._SPS.nbParticles; i++) {
             // cells of current time series index are set visible, all other invisible
-            if (this._clusters[i] == this._timeSeriesIndex) {
-                this._SPS.particles[i].color = BABYLON.Color4.FromHexString(this._colors[this._timeSeriesIndex]);
+            if (this._timeSeriesVariable[i] == this._timeSeriesIndex) {
+                this._SPS.particles[i].color = BABYLON.Color4.FromHexString(this._colors[this._clusters[i]]);
             }
-            else if (this._clusters[i] == indexBefore) {
+            else if (this._timeSeriesVariable[i] == indexBefore) {
                 if (this._setTimeSeries) {
                     this._SPS.particles[i].color = new BABYLON.Color4(0.9, 0.9, 0.9, 0.5);
                 }
@@ -361,7 +361,7 @@ var SCVis = /** @class */ (function () {
                     this._SPS.particles[i].color = new BABYLON.Color4(0.9, 0.9, 0.9, 0.3);
                 }
             }
-            else if (this._clusters[i] == indexBefore2 && this._setTimeSeries) {
+            else if (this._timeSeriesVariable[i] == indexBefore2 && this._setTimeSeries) {
                 this._SPS.particles[i].color = new BABYLON.Color4(0.9, 0.9, 0.9, 0.3);
             }
         }
@@ -762,10 +762,20 @@ var SCVis = /** @class */ (function () {
     };
     /**
      * Display the cell colors as a time series
+     * @param timeSeriesVariable Array of same length as number of cells indicating time point to show cell
      */
-    SCVis.prototype.enableTimeSeries = function () {
+    SCVis.prototype.enableTimeSeries = function (timeSeriesVariable) {
         this._isTimeSeries = true;
+        this._timeSeriesVariable = timeSeriesVariable;
         this._updateTimeSeriesLabels();
+        return this;
+    };
+    /**
+     * Change the variable for the time series.
+     * @param timeSeriesVariable Array of same length as number of cells indicating time point to show cell
+     */
+    SCVis.prototype.setTimeVariable = function (timeSeriesVariable) {
+        this._timeSeriesVariable = timeSeriesVariable;
         return this;
     };
     /**

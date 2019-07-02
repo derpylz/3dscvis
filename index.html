@@ -4570,7 +4570,7 @@
             vis3.createScene()
             .doRender()
             .colorByClusters(clusters)
-            .enableTimeSeries()
+            .enableTimeSeries(clusters.map(Number))
             .setTimeSeriesSpeed(20)
             .playTimeSeries();
         });
@@ -4622,7 +4622,7 @@
                         var vis = new SCVis("renderCanvas", coordinates);
                         vis.createScene().doRender();
                         vis.colorByClusters(clusters);
-                        vis.enableTimeSeries().setTimeSeriesSpeed(20);
+                        vis.enableTimeSeries(clusters.map(Number)).setTimeSeriesSpeed(20);
                         vis.playTimeSeries();
                     </code></pre>
                 </td>
