@@ -1058,6 +1058,23 @@ var SCVis = /** @class */ (function () {
         this._isAnaglyph = false;
         return this;
     };
+    // downloadHTML(scriptPath: string): SCVis {
+    //     let element = document.createElement('a');
+    //     let html = '<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html" charset="utf-8" /><title>3dSCVis</title>';
+    //     html += '<script>' + loadFile(scriptPath + "/babylon.custom.js") + '</script>';
+    //     html += '<script>' + loadFile(scriptPath + "/chroma.min.js") + '</script>';
+    //     html += '<script>' + loadFile(scriptPath + "/CCapture.all.min.js") + '</script>';
+    //     html += '<script>' + loadFile(scriptPath + "/3dSCVis.js") + '</script>';
+    //     html += '<script>' + "var vis = " + JSON.stringify(this) + "; vis.doRender();";
+    //     html += '</head></body><canvas id="' + this._canvas.id + '" oncontextmenu="return false;></canvas></body></html>';
+    //     element.setAttribute('href', 'data:text/html;charset=utf-8,' + encodeURIComponent(html));
+    //     element.setAttribute('download', '3dvis.html');
+    //     element.style.display = 'none';
+    //     document.body.appendChild(element);
+    //     element.click();
+    //     document.body.removeChild(element)
+    //     return this
+    // }
     /**
      * Start rendering the scene
      */
@@ -1073,3 +1090,13 @@ var SCVis = /** @class */ (function () {
     };
     return SCVis;
 }());
+// function loadFile(filePath: string) {
+//     var result = null;
+//     var xmlhttp = new XMLHttpRequest();
+//     xmlhttp.open("GET", filePath, false);
+//     xmlhttp.send();
+//     if (xmlhttp.status == 200) {
+//         result = xmlhttp.responseText;
+//     }
+//     return result;
+// }

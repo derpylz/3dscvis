@@ -54,7 +54,7 @@ class SCVis {
     private _turned: number = 0;
     private _cellPicking: boolean = false;
     private _selectionCallback = function (selection: number[]) { return false; };
-    private _labels: {[name: string]: Label} = {};
+    private _labels: { [name: string]: Label } = {};
     private _labelCounter: number = 0;
     private _showLabels: boolean = false;
     private _labelSize: number = 100;
@@ -1066,13 +1066,13 @@ class SCVis {
         const label = this._labels[labelId];
         label.timeLinked = true;
         label.linkedTo = [];
-        linking = linking.replace(/\s/g,'');
+        linking = linking.replace(/\s/g, '');
         let linkArray = linking.split(",");
         for (let idx = 0; idx < linkArray.length; idx++) {
             const link = linkArray[idx];
             if (link.indexOf("-") > -1) {
                 let lA = link.split("-");
-                for( let i = parseInt(lA[0]); i <= parseInt(lA[1]); i++) {
+                for (let i = parseInt(lA[0]); i <= parseInt(lA[1]); i++) {
                     label.linkedTo.push(i);
                 }
             } else {
@@ -1174,6 +1174,25 @@ class SCVis {
         return this;
     }
 
+    // downloadHTML(scriptPath: string): SCVis {
+    //     let element = document.createElement('a');
+    //     let html = '<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html" charset="utf-8" /><title>3dSCVis</title>';
+    //     html += '<script>' + loadFile(scriptPath + "/babylon.custom.js") + '</script>';
+    //     html += '<script>' + loadFile(scriptPath + "/chroma.min.js") + '</script>';
+    //     html += '<script>' + loadFile(scriptPath + "/CCapture.all.min.js") + '</script>';
+    //     html += '<script>' + loadFile(scriptPath + "/3dSCVis.js") + '</script>';
+    //     html += '<script>' + "var vis = " + JSON.stringify(this) + "; vis.doRender();";
+    //     html += '</head></body><canvas id="' + this._canvas.id + '" oncontextmenu="return false;></canvas></body></html>';
+    //     element.setAttribute('href', 'data:text/html;charset=utf-8,' + encodeURIComponent(html));
+    //     element.setAttribute('download', '3dvis.html');
+
+    //     element.style.display = 'none';
+    //     document.body.appendChild(element);
+    //     element.click();
+    //     document.body.removeChild(element)
+    //     return this
+    // }
+
     /**
      * Start rendering the scene
      */
@@ -1187,3 +1206,14 @@ class SCVis {
         return this;
     }
 }
+
+// function loadFile(filePath: string) {
+//     var result = null;
+//     var xmlhttp = new XMLHttpRequest();
+//     xmlhttp.open("GET", filePath, false);
+//     xmlhttp.send();
+//     if (xmlhttp.status == 200) {
+//         result = xmlhttp.responseText;
+//     }
+//     return result;
+// }
