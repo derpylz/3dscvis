@@ -18,6 +18,19 @@ class Label {
     }
 }
 
+class SCAnimation {
+    private _interpolations: number[][][];
+    private _identityMappings: number[];
+    private _frames: number[][];
+
+    constructor(frameVar: number[], identityVar: number[] = null, groupBy: number[] = null, interpolate: number = 0) {
+        if (identityVar.length == 0 && groupBy.length == 0) {
+            throw "Neither identity array nor grouping array was provided";
+        }
+        
+    }
+}
+
 
 class SCVis {
     private _canvas: HTMLCanvasElement;
@@ -65,6 +78,7 @@ class SCVis {
     private _mouseOverCallback = function (selection: number) { return false; };
     private _isAnaglyph: boolean = false;
     private _recordingRotationMod = 2;
+    private _hasAnimation: boolean = false;
 
     turntable: boolean = false;
 
