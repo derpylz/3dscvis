@@ -18,19 +18,6 @@ class Label {
     }
 }
 
-class SCAnimation {
-    private _interpolations: number[][][];
-    private _identityMappings: number[];
-    private _frames: number[][];
-
-    constructor(frameVar: number[], identityVar: number[] = null, groupBy: number[] = null, interpolate: number = 0) {
-        if (identityVar.length == 0 && groupBy.length == 0) {
-            throw "Neither identity array nor grouping array was provided";
-        }
-        
-    }
-}
-
 
 class SCVis {
     private _canvas: HTMLCanvasElement;
@@ -79,6 +66,8 @@ class SCVis {
     private _isAnaglyph: boolean = false;
     private _recordingRotationMod = 2;
     private _hasAnimation: boolean = false;
+    private _identityMappings: number[];
+    private _frames: { [frame:number]: number[] } = {};
 
     turntable: boolean = false;
 
@@ -1198,6 +1187,27 @@ class SCVis {
         }
         this._isAnaglyph = false;
         return this;
+    }
+
+    addAnimation(frameVar: number[], identityVar: number[] = null, groupBy: number[] = null, interpolate: number = 0) {
+        if (identityVar.length == 0 && groupBy.length == 0) {
+            throw "Neither identity array nor grouping array was provided";
+        }
+        if (frameVar.length != this._coords.length) {
+            throw "Frame array has wrong length"
+        }
+
+        if (identityVar.length == this._coords.length) {
+            for (let i = 0; i < frameVar.length; i++) {
+                const frame = frameVar[i];
+                
+            }
+        } else if (groupBy.length == this._coords.length) {
+
+        } else {
+            throw "Neither identity array nor grouping array has correct length"
+        }
+        
     }
 
     // downloadHTML(scriptPath: string): SCVis {
